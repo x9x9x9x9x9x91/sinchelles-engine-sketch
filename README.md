@@ -10,11 +10,13 @@ Eight tabs:
 - **0 · TODAY** — the shipped v3 layout, for A/B. The one in use today.
 - **1 · PANELS** *(boxes + glyphs)* — old boxes back, but each leads with a *picture* (waveform, env curve, step grid, comp/gain), spread across the whole screen. ENTER drills a panel open.
 - **2 · FOCUS** *(SOURCE-page model)* — calm one-value list on the left, one big live preview on the right that becomes whatever you touch.
-- **3 · BREATHE** *(lowest risk)* — exact same inline rows as today, just spread down the full height with a glyph anchor per row. Nav unchanged.
+- **★ 3 · BOXES** *(refined)* — each section is its own bordered card with a boxed name chip; only the envelope keeps a visualizer. Spacious, walled-off, calm.
 - **4 · HERO** *(bold)* — the engine is the star: big visualizer on top, tiny summary chips below, params bloom only when you ask.
-- **5 · RASTER** *(mixer-page family)* — boxes not rows, in the new MIXER page's raster idiom: section columns with a colour rule + mini-viz + a kept-visible value matrix. Keeps today's info density.
-- **6 · ROW VIZ** *(the mockup + viz)* — today's stream spaced like the mockup, with a per-category visualizer filling the gap under each row. Fast nav unchanged; the global bottom dock goes away.
-- **7 · 4+VIZ** — like today, but each row shows four params and the fifth slot becomes a small per-category visualizer instead of a fifth number.
+- **★ 5 · RASTER** *(refined, mixer-page family)* — section columns + a clean full value matrix, one family with the MIXER page; only the ENV column shows its curve. Densest.
+- **6 · ROW VIZ** — today's stream with a per-category visualizer under each row. *(Not a keeper — too busy.)*
+- **★ 7 · 7×TODAY** *(refined)* — today's density + fast nav, with boxed section labels + dividers for separation; the envelope curve is the one kept viz (inline under the ENV row). Closest to today.
+
+The **★ three** (3, 5, 7) are the ones liked + refined per feedback: boxes/separation added, decorative visualizers dropped, only the envelope kept.
 
 ## The diagnosis (why it feels dense)
 

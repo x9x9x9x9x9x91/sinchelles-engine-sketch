@@ -158,8 +158,9 @@ button.eng.on{background:#2e6f88;border-color:#2e6f88;color:#eafdff}
 <h1>SINCHELLES — <b>ENGINE page</b> redesign sketch</h1>
 <div class="sub">
 The shipped <b>v3 layout</b> (tab <b>0 · TODAY</b>) is the one in use today: 25 label+value pairs stacked in the top
-third as one block, a dead void in the middle, the eye with nothing to land on. Tabs <b>1–7</b> are different ways out —
-each attacks <i>density</i>, <i>anchor</i> and <i>wasted space</i> differently. Click the device, then drive it with the keyboard.
+third as one block, a dead void in the middle, the eye with nothing to land on. The <b>★ three</b> you liked — <b>3 · BOXES</b>,
+<b>5 · RASTER</b>, <b>7 · 7×TODAY</b> — are refined per the notes: boxes/separation added, the decorative visualizers dropped, only the
+envelope kept. The others stay for reference. Click the device, then drive it with the keyboard.
 </div>
 
 <div class="bar">
@@ -167,11 +168,11 @@ each attacks <i>density</i>, <i>anchor</i> and <i>wasted space</i> differently. 
     <button class="tab" data-v="0">0 · TODAY</button>
     <button class="tab" data-v="1">1 · PANELS</button>
     <button class="tab" data-v="2">2 · FOCUS</button>
-    <button class="tab" data-v="3">3 · BREATHE</button>
+    <button class="tab" data-v="3">★ 3 · BOXES</button>
     <button class="tab" data-v="4">4 · HERO</button>
-    <button class="tab" data-v="5">5 · RASTER</button>
+    <button class="tab" data-v="5">★ 5 · RASTER</button>
     <button class="tab" data-v="6">6 · ROW VIZ</button>
-    <button class="tab" data-v="7">7 · 4+VIZ</button>
+    <button class="tab" data-v="7">★ 7 · 7×TODAY</button>
   </div>
   <div class="grp"><span class="lbl">Engine</span>
     <button class="tab eng" data-e="sampler">SAMPLER</button>
@@ -429,23 +430,31 @@ function renderFocus(){
     +foot('<span class="k">↑↓</span> param/section · <span class="k">W/S</span> edit · <span class="k">→</span> jump section');
 }
 
-/* ============================================================= BREATHE (spread stream + glyph anchors) */
+/* ============================================================= BREATHE -> BOXES (separated cards) — refined */
 function renderBreathe(){
   const sc=secs();let html=crumb();
-  const fsec=sc[S.sec];const c0=rc(fsec.id);
-  html+=`<div class="subhdr"><span class="nm" style="color:${c0}">◆ ${(fsec.inline||fsec.full)[S.field][0]}</span><span class="ds">${fsec.id} · spread + anchored</span></div>`;
-  const top=30, avail=266, bh=avail/sc.length;
+  const fsec=sc[S.sec];const c0=rc(fsec.id);const fl0=(fsec.inline||fsec.full);
+  html+=`<div class="subhdr"><span class="nm" style="color:${c0}">◆ ${fl0[Math.min(S.field,fl0.length-1)][0]}</span><span class="ds">${fsec.id} · separated boxes</span></div>`;
+  const top=29, bottom=284, n=sc.length, gap=5, bh=(bottom-top)/n;
+  const cols=[96,171,246,321,396];  // param columns (after the label chip)
   sc.forEach((sec,si)=>{
-    const c=rc(sec.id), foc=(si===S.sec);
-    const flds=(sec.inline||sec.full);
-    let f='';flds.forEach((fl,fi)=>{const pill=foc&&fi===S.field;
-      f+=`<div class="fld ${pill?'pill':''}"><span style="color:${pill?'#04101e':c}">${fl[0]}</span><span class="v" style="${foc&&!pill?'color:var(--hi)':''}">${fl[1]}</span></div>`;});
-    html+=`<div class="br ${foc?'foc':''}" style="top:${top+si*bh}px;height:${bh-2}px">
-      <div class="gbox">${glyph(sec.glyph,c,T)}</div>
-      <div class="body"><div class="nm" style="color:${c}">${sec.id}</div><div class="fields">${f}</div></div></div>`;
-    if(si<sc.length-1)html+=`<div style="position:absolute;left:6px;right:6px;top:${top+(si+1)*bh-1}px;height:1px;background:#16161c"></div>`;
+    const c=rc(sec.id),foc=(si===S.sec);const y=top+si*bh;const ch=bh-gap;
+    const flds=(sec.inline||sec.full);const isEnv=(sec.id==='ENV');
+    const cy=y+ch/2-4;
+    // bordered card + role-coloured left edge (Tom: "boxen, was das abtrennt")
+    html+=`<div style="position:absolute;left:6px;right:6px;top:${y}px;height:${ch}px;border:1px solid ${foc?'var(--rail)':'#22222c'};border-radius:3px;background:${foc?'rgba(38,15,21,.5)':'rgba(15,15,21,.7)'}"></div>`;
+    html+=`<div style="position:absolute;left:6px;top:${y}px;width:3px;height:${ch}px;background:${foc?'var(--rail)':c};border-radius:3px 0 0 3px"></div>`;
+    // boxed section label chip
+    html+=`<div style="position:absolute;left:14px;top:${cy-2}px;padding:2px 6px;border:1px solid ${foc?'var(--rail)':'color-mix(in srgb,'+c+' 50%,#000)'};border-radius:2px;font-size:8px;letter-spacing:.5px;color:${foc?c:'color-mix(in srgb,'+c+' 85%,#000)'};background:rgba(0,0,0,.25)">${sec.id}</div>`;
+    const nf=isEnv?3:5;
+    flds.slice(0,nf).forEach((f,fi)=>{const pill=foc&&fi===S.field;
+      html+=`<div style="position:absolute;left:${cols[fi]/480*100}%;top:${cy}px;font-size:8px;display:flex;gap:5px;white-space:nowrap;${pill?'background:var(--pill);padding:0 3px;border-radius:1px':''}">
+        <span style="color:${pill?'#04101e':(foc?c:'color-mix(in srgb,'+c+' 50%,#666)')}">${f[0]}</span>
+        <span style="color:${pill?'#04101e':(foc?'var(--hi)':'var(--ink)')}">${f[1]}</span></div>`;});
+    // the one kept visualizer: the envelope curve, inside the ENV card
+    if(isEnv)html+=`<div style="position:absolute;right:14px;top:${y+5}px;width:150px;height:${ch-10}px">${gEnvBig(c,150,ch-10)}</div>`;
   });
-  html+=miniPat()+foot('<span class="k">↑↓</span> section · <span class="k">↔</span> field · <span class="k">W/S</span> edit · <span class="k">ENT</span> details');
+  html+=miniPat()+foot('<span class="k">↑↓</span> section · <span class="k">↔</span> field · <span class="k">W/S</span> edit');
   dev.innerHTML=html;
 }
 
@@ -472,24 +481,27 @@ function renderHero(){
   dev.innerHTML=html;
 }
 
-/* ============================================================= RASTER (mixer-family boxes) */
+/* ============================================================= RASTER (mixer-family boxes) — refined */
 function renderRaster(){
   const sc=secs();const nC=sc.length;const L=2,top=28,W=476,gap=3;
   const colW=(W-(nC-1)*gap)/nC;
   const cFoc=sc[S.rcol]||sc[0];const cc=rc(cFoc.id);
-  const flF=(cFoc.inline||cFoc.full);const fp=flF[Math.min(S.rrow,flF.length-1)];
+  const flF=cFoc.full;const fp=flF[Math.min(S.rrow,flF.length-1)];
   let html=crumb()+`<div class="subhdr"><span class="nm" style="color:${cc}">◆ ${fp[0]}</span><span class="ds">${cFoc.id} · raster (mixer family)</span></div>`;
   sc.forEach((sec,ci)=>{
     const c=rc(sec.id),foc=(ci===S.rcol);const x=L+ci*(colW+gap);
-    const flds=(sec.inline||sec.full);
+    const flds=sec.full;const isEnv=(sec.id==='ENV');
     html+=`<div style="position:absolute;left:${x}px;top:${top}px;width:${colW}px;bottom:24px;background:${foc?'rgba(40,16,22,.55)':'var(--panel)'};border:1px solid ${foc?'var(--rail)':'#191921'}"></div>`;
-    html+=`<div style="position:absolute;left:${x}px;top:${top+2}px;width:${colW}px;height:10px;text-align:center;font-size:7.5px;letter-spacing:.3px;color:${foc?c:'color-mix(in srgb,'+c+' 80%,#000)'}">${sec.id.replace('PATTERN','PAT')}</div>`;
-    html+=`<div style="position:absolute;left:${x+5}px;top:${top+13}px;width:${colW-10}px;height:2px;background:${c};opacity:${foc?1:.5}"></div>`;
-    html+=`<div style="position:absolute;left:${x+4}px;top:${top+18}px;width:${colW-8}px;height:44px">${glyph(sec.glyph,c,T)}</div>`;
-    flds.slice(0,5).forEach((f,fi)=>{
-      const cy=top+64+fi*16;const ff=foc&&fi===S.rrow;
-      html+=`<div style="position:absolute;left:${x+3}px;top:${cy}px;width:${colW-6}px;height:14px;font-size:7px;${ff?'background:var(--pill)':''}">
-        <div style="display:flex;justify-content:space-between;padding:1px 3px 0;line-height:12px"><span style="color:${ff?'#04101e':'color-mix(in srgb,'+c+' 52%,#666)'}">${f[0]}</span><span style="color:${ff?'#04101e':'var(--ink)'}">${f[1]}</span></div>
+    html+=`<div style="position:absolute;left:${x}px;top:${top+3}px;width:${colW}px;height:10px;text-align:center;font-size:7.5px;letter-spacing:.3px;color:${foc?c:'color-mix(in srgb,'+c+' 80%,#000)'}">${sec.id.replace('PATTERN','PAT')}</div>`;
+    html+=`<div style="position:absolute;left:${x+5}px;top:${top+14}px;width:${colW-10}px;height:2px;background:${c};opacity:${foc?1:.5}"></div>`;
+    // Only ENV keeps a visualizer (the others were decorative); every other column
+    // is a pure value matrix, mixer-style, starting higher to show more params.
+    let valTop=top+19;
+    if(isEnv){html+=`<div style="position:absolute;left:${x+4}px;top:${top+18}px;width:${colW-8}px;height:38px">${gEnvBig(c,colW-8,38)}</div>`;valTop=top+60;}
+    flds.forEach((f,fi)=>{
+      const cy=valTop+fi*15;const ff=foc&&fi===S.rrow;
+      html+=`<div style="position:absolute;left:${x+3}px;top:${cy}px;width:${colW-6}px;height:13px;font-size:7px;${ff?'background:var(--pill)':''}">
+        <div style="display:flex;justify-content:space-between;padding:1px 3px 0;line-height:11px"><span style="color:${ff?'#04101e':'color-mix(in srgb,'+c+' 52%,#666)'}">${f[0]}</span><span style="color:${ff?'#04101e':'var(--ink)'}">${f[1]}</span></div>
         <div style="height:1px;background:${ff?'rgba(4,16,30,.5)':'#1b1b23'};margin:1px 3px 0"></div></div>`;
     });
   });
@@ -522,26 +534,28 @@ function renderRowsViz(){
   dev.innerHTML=html;
 }
 
-/* ============================================================= 4 + VIZ (four params, visualizer in the 5th slot) */
+/* ============================================================= 7 x TODAY (today density + boxed labels + env-only viz) — refined */
 function renderInlineViz(){
   const sc=secs();let html=crumb();
   const fsec=sc[S.sec];const c0=rc(fsec.id);const fl0=(fsec.inline||fsec.full);
-  html+=`<div class="subhdr"><span class="nm" style="color:${c0}">◆ ${fl0[Math.min(S.field,3,fl0.length-1)][0]}</span><span class="ds">${fsec.id} · 4 params + visualizer</span></div>`;
-  const top=32, bottom=284, bh=(bottom-top)/sc.length;
-  const cols=[66,147,228,309];
+  html+=`<div class="subhdr"><span class="nm" style="color:${c0}">◆ ${fl0[Math.min(S.field,fl0.length-1)][0]}</span><span class="ds">${fsec.id} · compact + boxed (7 × today)</span></div>`;
+  const top=30, bottom=284, n=sc.length, bh=(bottom-top)/n;
+  const cols=[96,171,246,321,396];
   sc.forEach((sec,si)=>{
     const c=rc(sec.id),foc=(si===S.sec);const y=top+si*bh;const flds=(sec.inline||sec.full);
-    const fy=y+(bh-8)/2;
+    const isEnv=(sec.id==='ENV');const ftop=y+5;
+    // separation: a subtle band + a boxed label (Tom drew boxes around the labels)
     if(foc){
-      html+=`<div style="position:absolute;left:0;right:0;top:${y}px;height:${bh-2}px;background:linear-gradient(90deg,rgba(40,16,22,.75),rgba(18,9,12,0))"></div>`;
+      html+=`<div style="position:absolute;left:0;right:0;top:${y}px;height:${bh-2}px;background:linear-gradient(90deg,rgba(40,16,22,.7),rgba(18,9,12,0) 80%)"></div>`;
       html+=`<div style="position:absolute;left:2px;top:${y+2}px;width:4px;height:${bh-6}px;background:var(--rail)"></div>`;}
-    html+=`<div style="position:absolute;left:10px;top:${fy}px;font-size:8px;letter-spacing:.5px;color:${foc?c:'color-mix(in srgb,'+c+' 78%,#000)'}">${sec.id}</div>`;
-    flds.slice(0,4).forEach((f,fi)=>{const pill=foc&&fi===S.field;
-      html+=`<div style="position:absolute;left:${cols[fi]/480*100}%;top:${fy}px;font-size:8px;display:flex;gap:5px;white-space:nowrap;${pill?'background:var(--pill);padding:0 3px;border-radius:1px':''}">
+    html+=`<div style="position:absolute;left:9px;top:${ftop-1}px;padding:1px 5px;border:1px solid ${foc?'var(--rail)':'color-mix(in srgb,'+c+' 45%,#000)'};border-radius:2px;font-size:8px;letter-spacing:.5px;color:${foc?c:'color-mix(in srgb,'+c+' 82%,#000)'};background:rgba(0,0,0,.25)">${sec.id}</div>`;
+    flds.slice(0,5).forEach((f,fi)=>{const pill=foc&&fi===S.field;
+      html+=`<div style="position:absolute;left:${cols[fi]/480*100}%;top:${ftop}px;font-size:8px;display:flex;gap:5px;white-space:nowrap;${pill?'background:var(--pill);padding:0 3px;border-radius:1px':''}">
         <span style="color:${pill?'#04101e':(foc?c:'color-mix(in srgb,'+c+' 45%,#555)')}">${f[0]}</span>
         <span style="color:${pill?'#04101e':(foc?'var(--hi)':'var(--ink)')}">${f[1]}</span></div>`;});
-    html+=`<div style="position:absolute;left:362px;top:${y+4}px;width:110px;height:${bh-9}px;opacity:${foc?1:.6}">${glyph(sec.glyph,c,T)}</div>`;
-    if(si<sc.length-1)html+=`<div style="position:absolute;left:6px;right:6px;top:${y+bh-1}px;height:1px;background:#141419"></div>`;
+    // the one visualizer worth keeping: env curve, inline under the ENV row's params
+    if(isEnv)html+=`<div style="position:absolute;left:90px;right:14px;top:${y+19}px;height:${bh-25}px">${gEnvBig(c,376,bh-25)}</div>`;
+    if(si<n-1)html+=`<div style="position:absolute;left:6px;right:6px;top:${y+bh-1}px;height:1px;background:#181820"></div>`;
   });
   html+=miniPat()+foot('<span class="k">↑↓</span> section · <span class="k">↔</span> field · <span class="k">W/S</span> edit');
   dev.innerHTML=html;
@@ -561,26 +575,26 @@ const NOTES={
   good:['Kills the wall — left side shows one value column, not five','<b>One big anchor</b> in the dead space that means something','Nav stays a fast vertical list — the speed worry is safe','Visually consistent with the SOURCE page'],
   bad:['Only the focused section\'s params are expanded at once','Right half is "spent" on preview (but it was empty before)'],
   says:'From the chat: „vllt so wie bei Source — die Overview zeigt kleine Visus statt der ganzen Values."'},
-3:{t:'BREATHE · same model, just let it breathe',tag:'low-risk',idea:'The smallest change. Keep the exact inline-edit rows you have — but spread the five sections down the FULL height with air, and give each a glyph anchor on the left. The block becomes five calm bands instead of one batzen. Nav and editing are unchanged.',
-  good:['<b>Identical interaction</b> to today — zero relearning, no slower nav','Breaks the block into five anchored bands — "die Zeilen müssen gebrochen werden"','Uses the whole screen; glyph per row gives the eye an anchor','Cheapest to build of all four'],
-  bad:['Still more text-forward than PANELS/HERO','Glyphs are small (row-height) so less of a "wow"'],
-  says:'From the chat: „durch mehrere Reihen die Zeilen etwas brechen, dann wirkt das nicht mehr wie ein Batzen."'},
+3:{t:'BOXES · separated cards (refined)',tag:'★ liked',idea:'Refined per the feedback: each section is now its own bordered CARD with a role-coloured edge and a boxed name chip — clear separation, no more block. The decorative visualizers are gone; only the envelope curve stays (it lives in the ENV card). Spacious, the old-2×2 calm as full-width rows.',
+  good:['<b>Real boxes</b> — every section walled off, the "abtrennen" ask','Only the envelope viz remains — no superfluous visuals','Airy and calm; the eye rests on one card at a time','Nav and editing identical to today'],
+  bad:['Most vertical space per section → fewer can be very dense','Borders everywhere is a strong, opinionated look'],
+  says:'From the chat: „bräuchte nur hier noch so boxen oder iwas, was das abtrennt … die visualizer sind bis auf envelope überflüssig."'},
 4:{t:'HERO · the engine is the star',tag:'bold',idea:'My opinionated take. At rest the page is the engine: a big live visualizer fills the top, and one row of tiny summary chips below carries each section\'s headline (ENV curve, PAT 16·1/16, MIX 0dB). Touch a chip → its params bloom at the bottom. The hero never leaves.',
   good:['<b>Almost no text at rest</b> — most "instrument", least "spreadsheet"','The viz IS the anchor and the wow; fills all the space','Chips still answer the "ah, this exists" worry with a headline each'],
   bad:['Fewest exact values visible at rest — relies on bloom','Biggest departure → most to build + most to A/B on hardware'],
   says:'From the chat: „was stört ist, dass sich alles im oberen Drittel abspielt … so mega viel Platz." → give the space to the engine.'},
-5:{t:'RASTER · the mixer page family',tag:'grid',idea:'Take the new MIXER page look — a raster of boxes, not rows — and apply it to ENGINE so the two pages feel like one family. Each section is a boxed strip with a colour rule, a small visual, and its key values kept visible. Boxes instead of zeilen, but it keeps the info density today\'s power users rely on.',
-  good:['<b>Boxes, not a block</b> — same raster rhythm as the MIXER page','Keeps most values visible (no glance-only loss) while still being boxed','Per-box mini-viz means the global bottom visualizer can go away','Distinct from the SOURCE page → ENGINE/MIX read as a set'],
-  bad:['Denser than PANELS/HERO — less "calm", more "console"','Boxed grid + matrix is the most layout work to get pixel-tight'],
-  says:'From the chat: „dieses raster layout … boxen anstatt zeilen … das könnte auch in richtung neuer mixerpage gehen."'},
+5:{t:'RASTER · the mixer page family (refined)',tag:'★ liked',idea:'The new MIXER page look applied to ENGINE — section columns, a value matrix, one family with the mixer. Refined: the decorative per-column visuals are gone; each column is now a clean value matrix, and only the ENV column carries a visual (its curve on top). Boxes instead of zeilen, full info density.',
+  good:['<b>Boxes, not a block</b> — same raster rhythm as the MIXER page','Full value matrix kept — densest, most info at rest','Only the envelope viz remains; the rest is clean values','ENGINE + MIXER read as one set'],
+  bad:['The most "console", least "calm" of the three','Boxed grid + matrix is the most layout work to get pixel-tight'],
+  says:'From the chat: „#5 ist auch interessant … dieses raster layout, boxen anstatt zeilen."'},
 6:{t:'ROW VIZ · the mockup, plus a visualizer per row',tag:'mockup',idea:'The current stream, spaced out exactly like the mockup — but the gap under each row holds a per-category visualizer (waveform under SOURCE, the env curve under ENV, the step grid under PATTERN…). Fast horizontal nav stays identical to today; the empty gaps become live per-category visuals, so the one global bottom dock can go.',
   good:['<b>Same fast nav as today</b> — nothing relearned','Every category gets its own moving visual, right where it lives','Fills the gap the mockup left empty — no dead void','Per-row viz replaces the single global dock'],
   bad:['Five visualizers at once can get busy — needs restraint','Less height per viz than FOCUS or HERO give one'],
   says:'From the chat: „der platz für foldout ist schon da + platz für visualizer … wenn die zeile drunter irgendwelche visus hat."'},
-7:{t:'4 + VIZ · four params, a visual in the fifth slot',tag:'inline',idea:'Like today, but each row shows four values and the fifth column becomes a small per-category visualizer instead of a fifth number. You trade one number for a live anchor on every row — no extra page furniture, the rows just spread a little to give the visual some height.',
-  good:['Per-category visual with <b>almost zero layout change</b> — it lives in the row','Drops one number per row → less text, more signal','Fast nav unchanged; global dock can go'],
-  bad:['The fifth param moves into the foldout / loses its at-rest slot','Small viz — an anchor, not a showpiece'],
-  says:'From the chat: „per-kategorie visualizer … kann man den unten auch weg machen."'}
+7:{t:'7 × TODAY · compact + boxed (refined)',tag:'★ liked',idea:'The mix of #7 and today you asked for: today\'s full density and fast nav, but each section gets a boxed label and a divider so the block reads as separated rows. The superfluous visualizers are gone — only the envelope curve stays, sitting inline under the ENV row. Closest to today of the three; least to relearn.',
+  good:['<b>Today\'s speed + density</b>, just separated and boxed','Boxed labels + dividers = the "abtrennen" without big cards','Only the envelope viz — no decorative clutter','Smallest change from the shipped layout'],
+  bad:['Flatter / less dramatic than BOXES or RASTER','The envelope is the only visual — by design'],
+  says:'From the chat: „7 und 3 find ich ok … so ne mischung aus 7 und jetzt … bis auf envelope überflüssig."'}
 };
 function renderNote(){
   const n=NOTES[S.v];
@@ -613,7 +627,7 @@ function nav(k){
     if(k==='up')S.sec=clamp(S.sec-1,0,n-1);
     if(k==='down')S.sec=clamp(S.sec+1,0,n-1);
     const fl=(sc[S.sec].inline||sc[S.sec].full);
-    const maxF=(S.v===7)?Math.min(4,fl.length):fl.length; // 4+VIZ edits 4 fields
+    const maxF=fl.length;
     if(k==='left')S.field=clamp(S.field-1,0,maxF-1);
     if(k==='right')S.field=clamp(S.field+1,0,maxF-1);
     S.field=clamp(S.field,0,maxF-1);
@@ -649,13 +663,13 @@ function nav(k){
     if(k==='left')S.chip=clamp(S.chip-1,0,n-1);
     if(k==='right')S.chip=clamp(S.chip+1,0,n-1);
     if(k==='enter'){S.chipOpen=true;S.chipRow=0;}
-  } else if(S.v===5){ // raster columns
+  } else if(S.v===5){ // raster columns (full value matrix)
     if(k==='left')S.rcol=clamp(S.rcol-1,0,n-1);
     if(k==='right')S.rcol=clamp(S.rcol+1,0,n-1);
-    const fl=(sc[S.rcol].inline||sc[S.rcol].full);
-    if(k==='up')S.rrow=clamp(S.rrow-1,0,Math.min(4,fl.length-1));
-    if(k==='down')S.rrow=clamp(S.rrow+1,0,Math.min(4,fl.length-1));
-    S.rrow=clamp(S.rrow,0,Math.min(4,fl.length-1));
+    const fl=sc[S.rcol].full;
+    if(k==='up')S.rrow=clamp(S.rrow-1,0,fl.length-1);
+    if(k==='down')S.rrow=clamp(S.rrow+1,0,fl.length-1);
+    S.rrow=clamp(S.rrow,0,fl.length-1);
   }
 }
 
