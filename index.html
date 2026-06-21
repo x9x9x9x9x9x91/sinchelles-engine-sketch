@@ -1,0 +1,644 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="robots" content="noindex,nofollow">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SINCHELLES — ENGINE page redesign sketch</title>
+<style>
+:root{
+  --scr:#06060a; --scr2:#0a0a10; --panel:#0c0c12; --panel2:#101018;
+  --TONE:rgb(64,220,210); --PITCH:rgb(160,138,198); --ENV:rgb(235,120,95);
+  --MIX:rgb(150,158,168); --TIME:rgb(200,160,60); --SHARED:rgb(120,205,95); --MOD:rgb(200,200,50);
+  --rail:rgb(214,84,96); --maroon:rgb(46,18,24); --pill:rgb(64,140,220);
+  --ink:#c7c7d0; --hi:#f4f4fa; --dim:#74747e; --dim2:#46464f; --dim3:#2a2a32;
+  --line:#191920; --line2:#23232e;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#101014;color:#d7d7df;font-family:'SF Mono','DejaVu Sans Mono',Menlo,Consolas,monospace}
+body{padding:18px 22px 40px}
+h1{font-size:15px;font-weight:600;color:#fff;letter-spacing:.4px;margin-bottom:2px}
+h1 b{color:var(--rail)}
+.sub{font-size:11.5px;color:#9a9aa6;margin-bottom:14px;max-width:980px;line-height:1.55}
+.sub b{color:#8ad9d0;font-weight:600}
+
+.bar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.bar .grp{display:flex;gap:4px;align-items:center;background:#17171d;border:1px solid #26262e;border-radius:7px;padding:4px}
+.bar .lbl{font-size:9.5px;color:#6f6f7b;letter-spacing:1px;padding:0 6px 0 4px;text-transform:uppercase}
+button.tab{font:inherit;font-size:11px;color:#b7b7c2;background:#1d1d25;border:1px solid #2c2c36;border-radius:5px;
+  padding:6px 11px;cursor:pointer;letter-spacing:.4px}
+button.tab:hover{background:#26262f;color:#fff}
+button.tab.on{background:var(--rail);border-color:var(--rail);color:#1a0608;font-weight:600}
+button.eng.on{background:#2e6f88;border-color:#2e6f88;color:#eafdff}
+
+.wrap{display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap}
+.stage{flex:0 0 auto}
+.scaler{width:960px;height:640px;border:1px solid #2a2a32;border-radius:3px;overflow:hidden;
+  box-shadow:0 8px 40px rgba(0,0,0,.5)}
+.dev{width:480px;height:320px;background:var(--scr);transform:scale(2);transform-origin:0 0;
+  position:relative;overflow:hidden;font-size:9px;line-height:1;color:var(--ink);-webkit-font-smoothing:none}
+.dev *{font-variant-ligatures:none}
+
+.note{flex:1 1 300px;min-width:300px;max-width:440px;font-size:12px;line-height:1.6;color:#c2c2cc}
+.note h2{font-size:13px;color:#fff;margin:0 0 7px;letter-spacing:.3px}
+.note h2 .tag{display:inline-block;font-size:10px;color:#1a0608;background:var(--rail);
+  padding:2px 7px;border-radius:4px;margin-right:7px;font-weight:600;vertical-align:1px}
+.note .idea{color:#e7e7ee;margin-bottom:10px}
+.note ul{list-style:none;margin:0 0 12px;padding:0}
+.note li{position:relative;padding-left:16px;margin-bottom:5px;color:#b4b4be}
+.note li:before{content:'';position:absolute;left:2px;top:6px;width:6px;height:6px;border-radius:50%;background:#3aa}
+.note li.minus:before{background:#c66;}
+.note li b{color:#fff;font-weight:600}
+.note .says{font-size:11px;color:#83838f;border-left:2px solid #33333c;padding:4px 0 4px 10px;margin-bottom:6px;font-style:italic}
+.note .says b{color:#cfa;font-style:normal}
+.keys{font-size:11px;color:#7c7c88;margin-top:6px;line-height:1.7}
+.keys kbd{font:inherit;font-size:10px;background:#1d1d25;border:1px solid #34343e;border-bottom-width:2px;
+  border-radius:3px;padding:1px 5px;color:#cfcfd8;margin:0 1px}
+.hintbar{font-size:11px;color:#6a6a76;margin-top:10px}
+.hintbar b{color:#9a9aa6}
+
+/* ===================== device chrome ===================== */
+.crumb{position:absolute;top:0;left:0;right:0;height:15px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 6px;font-size:8px;color:#7c7c88;background:#040406;z-index:5}
+.crumb .b{color:#a6a6b2}.crumb .sep{color:#3a3a44;margin:0 4px}
+.crumb .r{color:#6c6c78}.crumb .r .pl{color:#9a9aa6}
+.foot{position:absolute;bottom:0;left:0;right:0;height:12px;border-top:1px solid var(--line);
+  display:flex;align-items:center;justify-content:center;gap:6px;color:#55555f;font-size:7.5px;background:#040406}
+.foot .k{color:#8a8a96}
+.mini{position:absolute;bottom:12px;left:0;right:0;height:12px;display:flex;align-items:center;gap:2px;
+  padding:0 6px;background:#070709}
+.mini i{flex:1;height:6px;background:#1c1c24}
+.mini i.on{background:#4a3a42}.mini i.cur{background:var(--rail)}
+
+.subhdr{position:absolute;left:0;right:0;height:13px;top:15px;display:flex;align-items:center;gap:6px;
+  padding:0 6px;font-size:8px;background:#180e12;z-index:4}
+.subhdr .nm{font-weight:600}.subhdr .ds{color:#7a6a70}
+
+/* ===================== TODAY (v3) ===================== */
+.t-row{position:absolute;left:0;height:14px;display:flex;align-items:center;font-size:8px}
+.t-row .rail{position:absolute;left:2px;width:4px;top:0;bottom:0;background:var(--rail);display:none}
+.t-row.foc .rail{display:block}
+.t-row .nm{position:absolute;left:10px;letter-spacing:.5px}
+.t-row .f{position:absolute;display:flex;gap:5px;white-space:nowrap}
+.t-row .f .v{color:var(--ink)}
+.t-row .f.pill{background:var(--pill);color:#04101e;padding:1px 3px;border-radius:1px}
+.t-row .f.pill .v{color:#04101e}
+
+/* ===================== shared section glyph blocks ===================== */
+.gl{display:block}
+.val{color:var(--ink)}.hi{color:var(--hi)}
+
+/* ===================== PANELS ===================== */
+.pan{position:absolute;background:var(--panel);border:1px solid var(--line2);border-radius:2px;overflow:hidden}
+.pan .ph{position:absolute;top:0;left:0;right:0;height:12px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 5px;font-size:8px;letter-spacing:.5px}
+.pan .gly{position:absolute;left:0;right:0;top:13px}
+.pan .pv{position:absolute;bottom:3px;left:5px;right:5px;font-size:8px;color:var(--dim);display:flex;justify-content:space-between}
+.pan .pv b{color:var(--hi);font-weight:400}
+.pan.foc{border-color:var(--rail);box-shadow:0 0 0 1px var(--rail) inset}
+.pan .topln{position:absolute;top:0;left:0;right:0;height:2px}
+
+/* panel expanded overlay */
+.povl{position:absolute;background:#0a0a10;border:1px solid var(--rail);border-radius:2px;z-index:8;overflow:hidden}
+.povl .oh{height:13px;display:flex;align-items:center;gap:5px;padding:0 6px;font-size:8.5px;letter-spacing:.5px;background:#180e12}
+.povl .orow{height:13px;display:flex;align-items:center;padding:0 7px;font-size:8px;gap:6px}
+.povl .orow .ol{flex:0 0 78px;color:var(--dim)}
+.povl .orow .ob{flex:1;height:3px;background:#1d1d26;position:relative}
+.povl .orow .ob i{position:absolute;left:0;top:0;bottom:0;background:#3c3c4a}
+.povl .orow .ov{flex:0 0 56px;text-align:right;color:var(--ink)}
+.povl .orow.foc{background:var(--maroon)}
+.povl .orow.foc .ol{color:var(--hi)}.povl .orow.foc .ob i{background:var(--rail)}.povl .orow.foc .ov{color:var(--hi)}
+.povl .orow.foc{box-shadow:-3px 0 0 var(--rail) inset}
+
+/* ===================== FOCUS (rail + preview) ===================== */
+.fc-rail{position:absolute;top:28px;left:0;width:182px;bottom:24px;background:#08080d;border-right:1px solid var(--line2);overflow:hidden}
+.fc-sec{font-size:8px}
+.fc-sechdr{height:13px;display:flex;align-items:center;gap:5px;padding:0 6px;letter-spacing:.5px}
+.fc-sechdr .tri{color:var(--dim2)}
+.fc-prow{height:12px;display:flex;align-items:center;padding:0 6px 0 16px;font-size:7.5px;gap:6px}
+.fc-prow .l{flex:1;color:var(--dim)}.fc-prow .v{color:var(--ink)}
+.fc-prow.foc{background:var(--maroon);box-shadow:-3px 0 0 var(--rail) inset}
+.fc-prow.foc .l{color:var(--hi)}.fc-prow.foc .v{color:var(--hi)}
+.fc-sechdr.secfoc{background:#13101a}
+.fc-prev{position:absolute;top:28px;left:182px;right:0;bottom:24px;background:var(--scr);overflow:hidden}
+.fc-prev .pt{position:absolute;top:5px;left:8px;font-size:8px;letter-spacing:1px}
+.fc-prev .pmeta{position:absolute;top:5px;right:8px;font-size:8px;color:var(--dim)}
+
+/* ===================== BREATHE ===================== */
+.br{position:absolute;left:0;right:0;display:flex;align-items:center;gap:0}
+.br .gbox{flex:0 0 56px;height:46px;display:flex;align-items:center;justify-content:center}
+.br .body{flex:1;padding-right:6px}
+.br .nm{font-size:9px;letter-spacing:.8px;margin-bottom:3px}
+.br .fields{display:flex;flex-wrap:wrap;gap:3px 14px;font-size:8px}
+.br .fields .fld{display:flex;gap:5px}.br .fields .fld .v{color:var(--ink)}
+.br .fields .fld.pill{background:var(--pill);color:#04101e;padding:0 3px;border-radius:1px}
+.br .fields .fld.pill .v{color:#04101e}
+.br.foc{background:linear-gradient(90deg,rgba(40,16,22,.85),rgba(20,10,14,0))}
+.br.foc .gbox{box-shadow:inset 3px 0 0 var(--rail)}
+
+/* ===================== HERO ===================== */
+.hero-viz{position:absolute;top:28px;left:0;right:0;height:168px;background:var(--scr2);overflow:hidden}
+.hero-viz .vt{position:absolute;top:5px;left:8px;font-size:8px;letter-spacing:1px;color:var(--dim)}
+.hero-chips{position:absolute;top:200px;left:0;right:0;height:84px;display:flex;gap:5px;padding:6px}
+.chip{flex:1;background:var(--panel);border:1px solid var(--line2);border-radius:2px;position:relative;overflow:hidden}
+.chip .ct{position:absolute;top:0;left:0;right:0;height:11px;font-size:7.5px;letter-spacing:.5px;display:flex;align-items:center;padding:0 4px}
+.chip .cg{position:absolute;top:12px;left:0;right:0;bottom:13px}
+.chip .cv{position:absolute;bottom:2px;left:4px;right:4px;font-size:8px;color:var(--hi);text-align:center}
+.chip.foc{border-color:var(--rail);box-shadow:0 0 0 1px var(--rail) inset}
+.chip .topln{position:absolute;top:0;left:0;right:0;height:2px}
+.hero-bloom{position:absolute;left:0;right:0;bottom:24px;background:#0a0a10;border-top:1px solid var(--rail);z-index:9;padding:3px 0}
+.hero-bloom .brow{height:12px;display:flex;align-items:center;padding:0 8px;font-size:8px;gap:6px}
+.hero-bloom .brow .l{flex:0 0 90px;color:var(--dim)}
+.hero-bloom .brow .bb{flex:1;height:3px;background:#1d1d26;position:relative}
+.hero-bloom .brow .bb i{position:absolute;left:0;top:0;bottom:0;background:#3c3c4a}
+.hero-bloom .brow .v{flex:0 0 56px;text-align:right;color:var(--ink)}
+.hero-bloom .brow.foc{background:var(--maroon)}
+.hero-bloom .brow.foc .l,.hero-bloom .brow.foc .v{color:var(--hi)}
+.hero-bloom .brow.foc .bb i{background:var(--rail)}
+</style>
+
+<h1>SINCHELLES — <b>ENGINE page</b> redesign sketch</h1>
+<div class="sub">
+The shipped <b>v3 layout</b> (tab <b>0 · TODAY</b>) is the one in use today: 25 label+value pairs stacked in the top
+third as one block, a dead void in the middle, the eye with nothing to land on. Tabs <b>1–5</b> are five different ways out —
+each attacks <i>density</i>, <i>anchor</i> and <i>wasted space</i> differently. Click the device, then drive it with the keyboard.
+</div>
+
+<div class="bar">
+  <div class="grp"><span class="lbl">Layout</span>
+    <button class="tab" data-v="0">0 · TODAY</button>
+    <button class="tab" data-v="1">1 · PANELS</button>
+    <button class="tab" data-v="2">2 · FOCUS</button>
+    <button class="tab" data-v="3">3 · BREATHE</button>
+    <button class="tab" data-v="4">4 · HERO</button>
+    <button class="tab" data-v="5">5 · RASTER</button>
+  </div>
+  <div class="grp"><span class="lbl">Engine</span>
+    <button class="tab eng" data-e="sampler">SAMPLER</button>
+    <button class="tab eng" data-e="miplaits">MIPLAITS</button>
+    <button class="tab eng" data-e="wave">WAVE</button>
+    <button class="tab eng" data-e="drum">DRUM</button>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="stage">
+    <div class="scaler"><div class="dev" id="dev" tabindex="0"></div></div>
+    <div class="hintbar"><b>Keys:</b> 1–5 switch layout · q/e switch engine · ← → ↑ ↓ navigate · ENTER open/drill · ESC back · w/s nudge value</div>
+  </div>
+  <div class="note" id="note"></div>
+</div>
+
+<script>
+/* ---------- role → colour ---------- */
+const ROLE={SOURCE:'TONE','VOICE A':'TONE',VOICE:'PITCH','VOICE B':'PITCH',ENV:'ENV',MIX:'MIX',PATTERN:'TIME',SHARED:'SHARED'};
+const COL={TONE:'rgb(64,220,210)',PITCH:'rgb(160,138,198)',ENV:'rgb(235,120,95)',
+  MIX:'rgb(150,158,168)',TIME:'rgb(200,160,60)',SHARED:'rgb(120,205,95)',MOD:'rgb(200,200,50)'};
+const rc=s=>COL[ROLE[s]||'MIX'];
+
+/* ---------- shared sections (identical across engines) ---------- */
+const ENV ={id:'ENV',glyph:'env',hero:['SHAPE','A1·F10'],
+  inline:[['ATK','1 ms'],['SUS','1.00'],['FALL','10 ms'],['CURVE','-2.0'],['EMRPH','0%']],
+  full:[['ATTACK','1 ms'],['SUSTAIN','1.000'],['FALL','10 ms'],['CURVE','-2.000'],['ENV MORPH','0%'],['ADAPT','0%'],['TARGET','PAD']]};
+const MIX ={id:'MIX',glyph:'mix',hero:['VOL','100%'],
+  inline:[['DJF','+0.00'],['COMP','0/2:1'],['MIX','100%'],['DUCK','0%'],['VOL','100%']],
+  full:[['DJF','+0.00'],['COMP','0/2:1'],['MIX','100%'],['DUCK','0%'],['VOLUME','100%'],['PAN','C']]};
+const PAT ={id:'PATTERN',glyph:'steps',hero:['GRID','16·1/16'],
+  inline:[['LEN','4.00'],['STEPS','16'],['RES','1/16'],['PROB','100%'],['HUM','0%']],
+  full:[['LENGTH','4.00'],['STEPS','16'],['RESOLUTION','1/16'],['PROB','100%'],['HUMANIZE','0%'],['SWING','0%']]};
+
+const ENGINES={
+  sampler:{name:'SAMPLER',pat:'PAT A',viz:'wave',
+    secs:[
+      {id:'SOURCE',glyph:'wave',hero:['STRETCH','Vinyl'],
+        inline:[['BANK','0 ---'],['STRCH','Vinyl'],['RATE','1.00'],['SCRUB','0.00'],['DIR','FWD']],
+        full:[['BANK','0 ---'],['STRETCH','Vinyl'],['RATE','1.00'],['SAMPLE OCT','0'],['RATE QUANT','OFF'],['DIR','FWD'],['SCRUB','0.00']]},
+      {id:'VOICE',glyph:'pitch',hero:['SEMI','0 st'],
+        inline:[['SEMI','0 st'],['PITCH','=RATE'],['GAIN','0 dB']],
+        full:[['SEMI','0 st'],['PITCH','=RATE'],['GAIN','0 dB']]},
+      ENV,MIX,PAT]},
+  miplaits:{name:'MIPLAITS',pat:'PAT A',viz:'spectrum',
+    secs:[
+      {id:'SOURCE',glyph:'spectrum',hero:['MODEL','V.ANALOG'],
+        inline:[['LEGATO','OFF'],['GLIDE','OFF'],['MODEL','VANAL.'],['DETUNE','0.10'],['SHAPE','0.50']],
+        full:[['LEGATO','OFF'],['GLIDE','OFF'],['MODEL','VANAL.'],['DETUNE','0.10'],['SHAPE','0.50']]},
+      {id:'VOICE',glyph:'pitch',hero:['SEMI','0 st'],
+        inline:[['SEMI','0 st'],['FMOD','0.00'],['TMOD','0.00'],['MMOD','0.00'],['PDECAY','0.50']],
+        full:[['SEMI','0 st'],['FMOD','0.00'],['TMOD','0.00'],['MMOD','0.00'],['PDECAY','0.50']]},
+      ENV,MIX,PAT]},
+  wave:{name:'WAVE',pat:'PAT A',viz:'wavetable',
+    secs:[
+      {id:'SOURCE',glyph:'wavetable',hero:['SCAN','0.00'],
+        inline:[['LEGATO','OFF'],['GLIDE','OFF'],['OSC A','0.00'],['OSC B','0.00'],['SCAN A','0.00']],
+        full:[['LEGATO','OFF'],['GLIDE','OFF'],['OSC A','0.00'],['OSC B','0.00'],['SCAN A','0.00']]},
+      {id:'VOICE',glyph:'pitch',hero:['UNISON','3'],
+        inline:[['SEMI','0 st'],['DETUNE','0.15'],['UNISON','3'],['WIDTH','0.40'],['CUTOFF','0.00']],
+        full:[['SEMI','0 st'],['DETUNE','0.15'],['UNISON','3'],['WIDTH','0.40'],['CUTOFF','0.00']]},
+      ENV,MIX,PAT]},
+  drum:{name:'DRUM',pat:'PAT A',viz:'kick',
+    secs:[
+      {id:'SOURCE',glyph:'kick',hero:['FREQ','55Hz'],
+        inline:[['FREQ','55Hz'],['PAMT','3.20x'],['PDEC','0.05s'],['DECAY','0.65s'],['MIX','1.00']],
+        full:[['FREQ','55Hz'],['PAMT','3.20x'],['PDEC','0.05s'],['DECAY','0.65s'],['MIX','1.00']]},
+      {id:'VOICE',glyph:'pitch',hero:['SEMI','0 st'],
+        inline:[['SEMI','0 st']],full:[['SEMI','0 st']]},
+      ENV,MIX,PAT]},
+};
+
+/* ---------- glyph SVGs (role-coloured) ---------- */
+function svg(w,h,inner){return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" style="display:block">${inner}</svg>`;}
+function gWave(c,t){let p='M0,14 ';for(let x=0;x<=80;x+=2){const y=14+Math.sin(x*0.5+t*0.07)*Math.exp(-Math.abs(x-40)/55)*11*(1+0.3*Math.sin(x*0.13));p+=`L${x},${y.toFixed(1)} `;}
+  const ph=(t*0.6)%80;return svg(80,28,`<rect x="0" y="13.5" width="80" height="1" fill="#222"/><path d="${p}" fill="none" stroke="${c}" stroke-width="1" opacity=".9"/><line x1="${ph}" y1="0" x2="${ph}" y2="28" stroke="#fff" stroke-width=".7" opacity=".8"/>`);}
+function gEnv(c){return svg(80,28,`<path d="M2,26 L8,4 L26,4 Q40,4 52,16 L72,25 L78,26" fill="none" stroke="${c}" stroke-width="1.2"/><path d="M2,26 L8,4 L26,4 Q40,4 52,16 L72,25 L78,26 L78,28 L2,28 Z" fill="${c}" opacity=".10"/>`);}
+function gSteps(c,n=16,active=[0,4,6,8,12]){let r='';for(let i=0;i<n;i++){const x=2+i*4.8;const on=active.includes(i);r+=`<rect x="${x}" y="9" width="3.6" height="10" fill="${on?c:'#23232c'}" opacity="${on?.95:1}"/>`;}
+  return svg(80,28,`${r}<text x="40" y="6" font-size="6" fill="${c}" text-anchor="middle" font-family="monospace" opacity=".8">1/16</text>`);}
+function gMix(c){return svg(80,28,`
+  <rect x="6" y="4" width="4" height="20" fill="#1e1e26"/><rect x="6" y="6" width="4" height="18" fill="${c}" opacity=".8"/>
+  <text x="8" y="3" font-size="5" fill="${c}" text-anchor="middle" font-family="monospace">VOL</text>
+  <rect x="22" y="14" width="20" height="2" fill="#1e1e26"/><rect x="22" y="14" width="6" height="2" fill="${c}"/>
+  <text x="32" y="11" font-size="5" fill="${c}" text-anchor="middle" font-family="monospace">COMP</text>
+  <circle cx="64" cy="14" r="9" fill="none" stroke="#1e1e26" stroke-width="2"/><line x1="64" y1="14" x2="64" y2="6" stroke="${c}" stroke-width="1.4"/>
+  <text x="64" y="27" font-size="5" fill="${c}" text-anchor="middle" font-family="monospace">PAN C</text>`);}
+function gPitch(c){let k='';const xs=[2,8,14,20,26,32,38];for(const x of xs)k+=`<rect x="${x}" y="10" width="5" height="14" fill="#15151c" stroke="#2a2a32" stroke-width=".4"/>`;
+  const bx=[6,12,24,30,36];for(const x of bx)k+=`<rect x="${x}" y="10" width="3" height="8" fill="#0a0a10"/>`;
+  return svg(80,28,`${k}<rect x="2" y="10" width="5" height="14" fill="${c}" opacity=".55"/><text x="58" y="17" font-size="7" fill="${c}" font-family="monospace" text-anchor="middle">0 st</text>`);}
+function gSpectrum(c,t){let r='';for(let i=0;i<14;i++){const x=3+i*5.5;const h=2+Math.abs(Math.sin(i*0.7+t*0.05))*((14-i)/14)*22;r+=`<rect x="${x}" y="${26-h}" width="3.4" height="${h}" fill="${c}" opacity="${.5+0.5*(14-i)/14}"/>`;}return svg(80,28,r);}
+function gWavetable(c,t){let p1='M0,14 ',p2='M0,14 ';for(let x=0;x<=80;x+=2){p1+=`L${x},${(14+Math.sin(x*0.35+t*0.05)*9).toFixed(1)} `;p2+=`L${x},${(14+Math.sin(x*0.18+t*0.04+1)*7*Math.sin(x*0.55)).toFixed(1)} `;}
+  return svg(80,28,`<path d="${p1}" fill="none" stroke="${c}" stroke-width="1"/><path d="${p2}" fill="none" stroke="${c}" stroke-width=".8" opacity=".4"/>`);}
+function gKick(c,t){const ph=(t*0.5)%80;let p='M0,26 ';for(let x=0;x<=80;x+=2){const y=26-Math.exp(-x/16)*Math.cos(x*0.5)*22;p+=`L${x},${Math.max(2,y).toFixed(1)} `;}
+  return svg(80,28,`<path d="${p}" fill="none" stroke="${c}" stroke-width="1.2"/><line x1="${ph}" y1="0" x2="${ph}" y2="28" stroke="#fff" stroke-width=".6" opacity=".5"/>`);}
+function glyph(kind,c,t){switch(kind){case'wave':return gWave(c,t);case'env':return gEnv(c);case'steps':return gSteps(c);
+  case'mix':return gMix(c);case'pitch':return gPitch(c);case'spectrum':return gSpectrum(c,t);
+  case'wavetable':return gWavetable(c,t);case'kick':return gKick(c,t);default:return gWave(c,t);}}
+
+/* big engine viz for the preview / hero (taller) */
+function bigViz(kind,c,t,w,h){
+  if(kind==='wave'){let p=`M0,${h/2} `;for(let x=0;x<=w;x+=2){const y=h/2+Math.sin(x*0.18+t*0.06)*Math.exp(-Math.abs(x-w/2)/(w*0.7))*(h*0.38)*(1+0.3*Math.sin(x*0.05));p+=`L${x},${y.toFixed(1)} `;}
+    const ph=(t*1.1)%w;return svg(w,h,`<rect x="0" y="${h/2-.5}" width="${w}" height="1" fill="#1a1a22"/><path d="${p}" fill="none" stroke="${c}" stroke-width="1.1" opacity=".92"/><line x1="${ph}" y1="0" x2="${ph}" y2="${h}" stroke="#fff" stroke-width=".8" opacity=".85"/>`);}
+  if(kind==='spectrum'){let r='';const n=24;for(let i=0;i<n;i++){const x=4+i*((w-8)/n);const hh=4+Math.abs(Math.sin(i*0.5+t*0.04))*((n-i)/n)*(h*0.8);r+=`<rect x="${x}" y="${h-hh}" width="${(w-8)/n-1.5}" height="${hh}" fill="${c}" opacity="${.45+0.55*(n-i)/n}"/>`;}return svg(w,h,r);}
+  if(kind==='wavetable'){let g='';for(let k=0;k<5;k++){let p=`M0,${h/2} `;for(let x=0;x<=w;x+=2){p+=`L${x},${(h/2+Math.sin(x*0.06+t*0.03+k*0.5)*(h*0.3)*Math.sin(x*0.2)).toFixed(1)} `;}g+=`<path d="${p}" fill="none" stroke="${c}" stroke-width="${k===2?1.3:.7}" opacity="${k===2?.95:.3}"/>`;}return svg(w,h,g);}
+  if(kind==='kick'){const ph=(t*0.9)%w;let p=`M0,${h-2} `;for(let x=0;x<=w;x+=2){const y=(h-2)-Math.exp(-x/(w*0.2))*Math.cos(x*0.18)*(h*0.7);p+=`L${x},${Math.max(2,y).toFixed(1)} `;}
+    return svg(w,h,`<path d="${p}" fill="none" stroke="${c}" stroke-width="1.3"/><path d="${p} L${w},${h} L0,${h} Z" fill="${c}" opacity=".07"/><line x1="${ph}" y1="0" x2="${ph}" y2="${h}" stroke="#fff" stroke-width=".7" opacity=".5"/>`);}
+  return bigViz('wave',c,t,w,h);
+}
+/* preview specific to focused section (FOCUS / HERO bloom previews) */
+function sectionPreview(sec,eng,c,t,w,h){
+  if(sec.id==='ENV')return gEnvBig(c,w,h);
+  if(sec.id==='PATTERN')return stepsBig(c,w,h);
+  if(sec.id==='MIX')return mixBig(c,w,h);
+  if(sec.id==='VOICE')return pitchBig(c,w,h);
+  return bigViz(eng.viz,c,t,w,h); /* SOURCE -> engine viz */
+}
+function gEnvBig(c,w,h){const a=w*0.12,p=w*0.34,s=w*0.55,r2=w*0.96;
+  return svg(w,h,`<line x1="0" y1="${h-6}" x2="${w}" y2="${h-6}" stroke="#1a1a22"/>
+   <path d="M4,${h-6} L${a},6 L${p},6 Q${s},6 ${s+20},${h*0.55} L${r2},${h-8} L${w-2},${h-6}" fill="none" stroke="${c}" stroke-width="1.4"/>
+   <path d="M4,${h-6} L${a},6 L${p},6 Q${s},6 ${s+20},${h*0.55} L${r2},${h-8} L${w-2},${h-6} Z" fill="${c}" opacity=".09"/>
+   <circle cx="${a}" cy="6" r="2.5" fill="${c}"/><circle cx="${p}" cy="6" r="2" fill="${c}" opacity=".6"/><circle cx="${r2}" cy="${h-8}" r="2" fill="${c}" opacity=".6"/>
+   <text x="${a}" y="${h-1}" font-size="6.5" fill="${c}" text-anchor="middle" font-family="monospace">ATK</text>
+   <text x="${(p+s)/2}" y="${h-1}" font-size="6.5" fill="${c}" text-anchor="middle" font-family="monospace">SUS</text>
+   <text x="${r2-14}" y="${h-1}" font-size="6.5" fill="${c}" text-anchor="middle" font-family="monospace">FALL</text>`);}
+function stepsBig(c,w,h){let r='';const n=16,active=[0,4,6,8,12];const cw=(w-12)/n;for(let i=0;i<n;i++){const x=6+i*cw;const on=active.includes(i);
+  r+=`<rect x="${x}" y="${h*0.3}" width="${cw-2}" height="${h*0.4}" fill="${on?c:'#1c1c24'}" opacity="${on?.9:1}"/>`;if(i%4===0)r+=`<text x="${x+1}" y="${h*0.3-3}" font-size="5.5" fill="${c}" font-family="monospace" opacity=".7">${i+1}</text>`;}
+  return svg(w,h,`${r}<text x="6" y="${h-4}" font-size="7" fill="${c}" font-family="monospace">16 steps · 1/16 · LEN 4.00</text>`);}
+function mixBig(c,w,h){return svg(w,h,`
+  <rect x="14" y="8" width="6" height="${h-24}" fill="#1a1a22"/><rect x="14" y="12" width="6" height="${h-28}" fill="${c}" opacity=".8"/>
+  <text x="17" y="${h-6}" font-size="6.5" fill="${c}" text-anchor="middle" font-family="monospace">VOL</text>
+  <text x="17" y="6" font-size="6" fill="#ccc" text-anchor="middle" font-family="monospace">100%</text>
+  <path d="M${w*0.3},${h-14} L${w*0.5},${h-14} L${w*0.72},22" fill="none" stroke="${c}" stroke-width="1.2"/>
+  <text x="${w*0.5}" y="${h-3}" font-size="6.5" fill="${c}" text-anchor="middle" font-family="monospace">COMP 2:1</text>
+  <circle cx="${w*0.88}" cy="${h*0.4}" r="14" fill="none" stroke="#1a1a22" stroke-width="3"/><line x1="${w*0.88}" y1="${h*0.4}" x2="${w*0.88}" y2="${h*0.4-14}" stroke="${c}" stroke-width="1.6"/>
+  <text x="${w*0.88}" y="${h-3}" font-size="6.5" fill="${c}" text-anchor="middle" font-family="monospace">PAN C</text>`);}
+function pitchBig(c,w,h){let k='';const n=10,kw=(w-20)/n;for(let i=0;i<n;i++){k+=`<rect x="${10+i*kw}" y="${h*0.25}" width="${kw-1}" height="${h*0.55}" fill="#13131a" stroke="#2a2a32" stroke-width=".5"/>`;}
+  for(const i of [0,1,3,4,5,7,8])k+=`<rect x="${10+i*kw+kw*0.65}" y="${h*0.25}" width="${kw*0.6}" height="${h*0.34}" fill="#06060a"/>`;
+  return svg(w,h,`${k}<rect x="10" y="${h*0.25}" width="${kw-1}" height="${h*0.55}" fill="${c}" opacity=".55"/>
+   <text x="${w/2}" y="${h-4}" font-size="7" fill="${c}" text-anchor="middle" font-family="monospace">SEMI 0 st · DET 0.15</text>`);}
+
+/* ---------- state ---------- */
+const S={v:0,e:'sampler',
+  sec:0,field:0,exp:-1,          // TODAY + BREATHE (stream)
+  pan:0,panOpen:false,panRow:0,  // PANELS
+  fsec:0,ffield:0,               // FOCUS
+  chip:0,chipOpen:false,chipRow:0,// HERO
+  rcol:0,rrow:0                  // RASTER
+};
+let T=0; // animation tick
+const dev=document.getElementById('dev');
+const eng=()=>ENGINES[S.e];
+const secs=()=>eng().secs;
+
+/* ---------- chrome ---------- */
+function crumb(){const e=eng();return `<div class="crumb"><div><span class="b">T1</span><span class="sep">▸</span>${e.name}<span class="sep">▸</span>${e.pat}<span class="sep">▸</span><span class="b">ENGINE</span></div><div class="r">■ 01/16 &nbsp; <span class="pl">120</span> BPM</div></div>`;}
+function foot(txt){return `<div class="foot">${txt}</div>`;}
+function miniPat(){let c='';for(let i=0;i<16;i++)c+=`<i class="${i===0?'cur':(i%4===0?'on':'')}"></i>`;return `<div class="mini">${c}</div>`;}
+
+/* ============================================================= TODAY (v3) */
+function renderToday(){
+  const sc=secs();let rows='';
+  const cols=[66,147,228,309,390].map(x=>x/480*100); // % left positions ~ kFieldStartX + i*kColW
+  sc.forEach((sec,si)=>{
+    const c=rc(sec.id);const foc=(S.exp<0&&si===S.sec);
+    const flds=(S.exp===si)?[]:(sec.inline||sec.full).slice(0,5);
+    const y=30+si*16;
+    if(S.exp===si){
+      // expanded accordion
+      rows+=`<div style="position:absolute;left:0;right:0;top:${y}px;height:13px;background:#180e12;font-size:8.5px;display:flex;align-items:center;padding:0 10px;color:${c};letter-spacing:.5px"><span style="position:absolute;left:2px;width:4px;top:0;bottom:0;background:${c}"></span>${sec.id}</div>`;
+      const fr=sec.full;fr.forEach((f,fi)=>{const fy=y+13+fi*13;const ff=fi===S.field;
+        rows+=`<div style="position:absolute;left:0;right:0;top:${fy}px;height:13px;font-size:8px;display:flex;align-items:center;padding:0 8px;gap:6px;${ff?'background:var(--maroon);box-shadow:-4px 0 0 var(--rail) inset':''}">
+          <span style="flex:0 0 90px;color:${ff?'#fff':'var(--dim)'}">${f[0]}</span>
+          <span style="flex:1;height:3px;background:#1d1d26;position:relative"><i style="position:absolute;left:0;top:0;bottom:0;width:${20+fi*9}%;background:${ff?'var(--rail)':'#3c3c4a'}"></i></span>
+          <span style="flex:0 0 60px;text-align:right;color:${ff?'#fff':'var(--ink)'}">${f[1]}</span></div>`;});
+      return;
+    }
+    let f='';flds.forEach((fl,fi)=>{const pill=foc&&fi===S.field;
+      const lc=pill?'#04101e':(foc?c:`color-mix(in srgb, ${c} 42%, #555)`);
+      f+=`<div class="f ${pill?'pill':''}" style="left:${cols[fi]}%;top:3px;color:${lc}"><span>${fl[0]}</span><span class="v" style="${foc&&!pill?'color:var(--hi)':''}">${fl[1]}</span></div>`;});
+    rows+=`<div class="t-row ${foc?'foc':''}" style="top:${y}px;right:0;background:${foc?'var(--maroon)':''}">
+      <span class="rail"></span><span class="nm" style="color:${foc?c:`color-mix(in srgb, ${c} 80%, #000)`}">${sec.id}</span>${f}</div>`;
+  });
+  // dock
+  const c=rc(sc[S.sec]?sc[S.sec].id:'SOURCE');
+  const dock=`<div style="position:absolute;left:0;right:0;top:236px;height:60px;background:#06060a;border-top:1px solid #19191f">
+     <div style="position:absolute;left:4px;top:2px;right:120px;bottom:2px">${bigViz(eng().viz,'rgb(90,150,200)',T,344,56)}</div>
+     <div style="position:absolute;right:4px;top:2px;width:108px;bottom:2px">
+       <div style="font-size:7.5px;color:var(--ENV);position:absolute;top:0;right:0">AMP ENV</div>
+       <div style="position:absolute;top:10px;left:0;right:0;bottom:0">${gEnvBig('rgb(120,110,180)',108,40)}</div></div></div>`;
+  dev.innerHTML=crumb()
+    +`<div class="subhdr"><span class="nm" style="color:${c}">◆ ${(sc[S.sec]&&(sc[S.sec].inline||sc[S.sec].full)[S.field]||['',''])[0]}</span><span class="ds">edit param value</span></div>`
+    +rows+dock+miniPat()+foot('<span class="k">W/S</span> edit · <span class="k">↔</span> field · <span class="k">ENT</span> open · <span class="k">CT↑↓</span> ends');
+}
+
+/* ============================================================= PANELS */
+function renderPanels(){
+  const sc=secs();
+  // grid: 3 cols x 2 rows over body 28..296 ; 6th cell = engine viz
+  const L=2,Tg=28,W=476,H=266,gap=3;
+  const cw=(W-2*gap)/3, chh=(H-gap)/2;
+  let html=crumb()+`<div class="subhdr"><span class="nm" style="color:${rc(sc[S.pan]?sc[S.pan].id:'SOURCE')}">◆ ${sc[S.pan]?sc[S.pan].id:''}</span><span class="ds">${S.panOpen?'editing — ESC backs out':'overview — ENTER drills in'}</span></div>`;
+  const cells=[...sc.map((s,i)=>({sec:s,i})), {viz:true,i:sc.length}];
+  cells.forEach((cell,idx)=>{
+    const col=idx%3, row=Math.floor(idx/3);
+    const x=L+col*(cw+gap), y=Tg+row*(chh+gap);
+    if(cell.viz){
+      html+=`<div class="pan" style="left:${x}px;top:${y}px;width:${cw}px;height:${chh}px">
+        <div class="topln" style="background:rgb(90,150,200)"></div>
+        <div class="ph" style="color:rgb(110,160,200)"><span>ENGINE</span><span style="color:var(--ENV);font-size:7px">AMP ENV</span></div>
+        <div class="gly" style="bottom:14px;left:3px;right:3px">${bigViz(eng().viz,'rgb(90,150,200)',T,cw-6,chh-30)}</div>
+        <div class="gly" style="height:13px;bottom:1px;left:3px;right:3px">${gEnvBig('rgb(120,110,180)',cw-6,12)}</div></div>`;
+      return;
+    }
+    const sec=cell.sec, c=rc(sec.id), foc=(cell.i===S.pan);
+    html+=`<div class="pan ${foc?'foc':''}" style="left:${x}px;top:${y}px;width:${cw}px;height:${chh}px">
+      <div class="topln" style="background:${c};opacity:${foc?1:.6}"></div>
+      <div class="ph" style="color:${c}"><span>${sec.id}</span><span style="color:var(--dim);font-size:7px">${sec.full.length}</span></div>
+      <div class="gly" style="bottom:14px;left:4px;right:4px">${glyph(sec.glyph,c,T)}</div>
+      <div class="pv"><span>${sec.hero[0]}</span><b>${sec.hero[1]}</b></div></div>`;
+  });
+  // expanded overlay
+  if(S.panOpen && sc[S.pan]){
+    const sec=sc[S.pan], c=rc(sec.id);
+    let r='';sec.full.forEach((f,fi)=>{const ff=fi===S.panRow;
+      r+=`<div class="orow ${ff?'foc':''}"><span class="ol">${f[0]}</span><span class="ob"><i style="width:${20+fi*8}%;"></i></span><span class="ov">${f[1]}</span></div>`;});
+    html+=`<div class="povl" style="left:60px;top:40px;right:60px;bottom:46px">
+      <div class="oh" style="color:${c}"><span style="width:4px;height:9px;background:${c};display:inline-block"></span>${sec.id}<span style="margin-left:auto;color:var(--dim);font-size:7px">ENTER/ESC close</span></div>${r}</div>`;
+  }
+  html+=miniPat()+foot('<span class="k">↑↓←→</span> panel · <span class="k">ENT</span> drill in · <span class="k">W/S</span> nudge · <span class="k">ESC</span> back');
+  dev.innerHTML=html;
+}
+
+/* ============================================================= FOCUS (rail + preview) */
+function renderFocus(){
+  const sc=secs();const fsec=sc[S.fsec], c=rc(fsec.id);
+  let rail='';
+  sc.forEach((sec,si)=>{
+    const sc2=rc(sec.id), sf=(si===S.fsec);
+    rail+=`<div class="fc-sechdr ${sf?'secfoc':''}" style="color:${sc2}"><span class="tri">${sf?'▾':'▸'}</span>${sec.id}<span style="margin-left:auto;color:var(--dim);font-size:7px">${sf?'':sec.hero[1]}</span></div>`;
+    if(sf){const fr=sec.full;fr.forEach((f,fi)=>{const ff=fi===S.ffield;
+      rail+=`<div class="fc-prow ${ff?'foc':''}"><span class="l">${f[0]}</span><span class="v">${f[1]}</span></div>`;});}
+  });
+  const pv=sectionPreview(fsec,eng(),c,T,298,224);
+  const focParam=fsec.full[Math.min(S.ffield,fsec.full.length-1)];
+  dev.innerHTML=crumb()
+    +`<div class="subhdr"><span class="nm" style="color:${c}">◆ ${focParam[0]}</span><span class="ds">${fsec.id} · live preview right</span></div>`
+    +`<div class="fc-rail">${rail}</div>`
+    +`<div class="fc-prev"><div class="pt" style="color:${c}">${fsec.id}</div><div class="pmeta">${focParam[0]} ${focParam[1]}</div>
+        <div style="position:absolute;top:18px;left:4px;right:4px;bottom:6px">${pv}</div></div>`
+    +foot('<span class="k">↑↓</span> param/section · <span class="k">W/S</span> edit · <span class="k">→</span> jump section');
+}
+
+/* ============================================================= BREATHE (spread stream + glyph anchors) */
+function renderBreathe(){
+  const sc=secs();let html=crumb();
+  const fsec=sc[S.sec];const c0=rc(fsec.id);
+  html+=`<div class="subhdr"><span class="nm" style="color:${c0}">◆ ${(fsec.inline||fsec.full)[S.field][0]}</span><span class="ds">${fsec.id} · spread + anchored</span></div>`;
+  const top=30, avail=266, bh=avail/sc.length;
+  sc.forEach((sec,si)=>{
+    const c=rc(sec.id), foc=(si===S.sec);
+    const flds=(sec.inline||sec.full);
+    let f='';flds.forEach((fl,fi)=>{const pill=foc&&fi===S.field;
+      f+=`<div class="fld ${pill?'pill':''}"><span style="color:${pill?'#04101e':c}">${fl[0]}</span><span class="v" style="${foc&&!pill?'color:var(--hi)':''}">${fl[1]}</span></div>`;});
+    html+=`<div class="br ${foc?'foc':''}" style="top:${top+si*bh}px;height:${bh-2}px">
+      <div class="gbox">${glyph(sec.glyph,c,T)}</div>
+      <div class="body"><div class="nm" style="color:${c}">${sec.id}</div><div class="fields">${f}</div></div></div>`;
+    if(si<sc.length-1)html+=`<div style="position:absolute;left:6px;right:6px;top:${top+(si+1)*bh-1}px;height:1px;background:#16161c"></div>`;
+  });
+  html+=miniPat()+foot('<span class="k">↑↓</span> section · <span class="k">↔</span> field · <span class="k">W/S</span> edit · <span class="k">ENT</span> details');
+  dev.innerHTML=html;
+}
+
+/* ============================================================= HERO (engine star + summary chips) */
+function renderHero(){
+  const sc=secs();const c=rc(sc[S.chip]?sc[S.chip].id:'SOURCE');
+  let html=crumb()+`<div class="subhdr"><span class="nm" style="color:${c}">◆ ${sc[S.chip]?sc[S.chip].id:''}</span><span class="ds">${S.chipOpen?'editing':'the engine, not the spreadsheet'}</span></div>`;
+  html+=`<div class="hero-viz"><div class="vt">${eng().name} · ${eng().secs[0].hero[1]}</div>
+     <div style="position:absolute;top:16px;left:4px;right:4px;bottom:6px">${bigViz(eng().viz,'rgb(120,180,220)',T,470,142)}</div></div>`;
+  // chips
+  let chips='';sc.forEach((sec,si)=>{const cc=rc(sec.id), foc=(si===S.chip);
+    chips+=`<div class="chip ${foc?'foc':''}"><div class="topln" style="background:${cc};opacity:${foc?1:.6}"></div>
+      <div class="ct" style="color:${cc}">${sec.id.replace('PATTERN','PAT')}</div>
+      <div class="cg">${glyph(sec.glyph,cc,T)}</div>
+      <div class="cv">${sec.hero[1]}</div></div>`;});
+  html+=`<div class="hero-chips">${chips}</div>`;
+  if(S.chipOpen && sc[S.chip]){
+    const sec=sc[S.chip], cc=rc(sec.id);let r='';
+    sec.full.forEach((f,fi)=>{const ff=fi===S.chipRow;
+      r+=`<div class="brow ${ff?'foc':''}"><span class="l" style="${ff?'':'color:'+cc+';opacity:.7'}">${f[0]}</span><span class="bb"><i style="width:${20+fi*8}%"></i></span><span class="v">${f[1]}</span></div>`;});
+    html+=`<div class="hero-bloom">${r}</div>`;
+  }
+  html+=foot('<span class="k">←→</span> section · <span class="k">ENT</span> edit · <span class="k">↑↓</span> param · <span class="k">ESC</span> close');
+  dev.innerHTML=html;
+}
+
+/* ============================================================= RASTER (mixer-family boxes) */
+function renderRaster(){
+  const sc=secs();const nC=sc.length;const L=2,top=28,W=476,gap=3;
+  const colW=(W-(nC-1)*gap)/nC;
+  const cFoc=sc[S.rcol]||sc[0];const cc=rc(cFoc.id);
+  const flF=(cFoc.inline||cFoc.full);const fp=flF[Math.min(S.rrow,flF.length-1)];
+  let html=crumb()+`<div class="subhdr"><span class="nm" style="color:${cc}">◆ ${fp[0]}</span><span class="ds">${cFoc.id} · raster (mixer family)</span></div>`;
+  sc.forEach((sec,ci)=>{
+    const c=rc(sec.id),foc=(ci===S.rcol);const x=L+ci*(colW+gap);
+    const flds=(sec.inline||sec.full);
+    html+=`<div style="position:absolute;left:${x}px;top:${top}px;width:${colW}px;bottom:24px;background:${foc?'rgba(40,16,22,.55)':'var(--panel)'};border:1px solid ${foc?'var(--rail)':'#191921'}"></div>`;
+    html+=`<div style="position:absolute;left:${x}px;top:${top+2}px;width:${colW}px;height:10px;text-align:center;font-size:7.5px;letter-spacing:.3px;color:${foc?c:'color-mix(in srgb,'+c+' 80%,#000)'}">${sec.id.replace('PATTERN','PAT')}</div>`;
+    html+=`<div style="position:absolute;left:${x+5}px;top:${top+13}px;width:${colW-10}px;height:2px;background:${c};opacity:${foc?1:.5}"></div>`;
+    html+=`<div style="position:absolute;left:${x+4}px;top:${top+18}px;width:${colW-8}px;height:44px">${glyph(sec.glyph,c,T)}</div>`;
+    flds.slice(0,5).forEach((f,fi)=>{
+      const cy=top+64+fi*16;const ff=foc&&fi===S.rrow;
+      html+=`<div style="position:absolute;left:${x+3}px;top:${cy}px;width:${colW-6}px;height:14px;font-size:7px;${ff?'background:var(--pill)':''}">
+        <div style="display:flex;justify-content:space-between;padding:1px 3px 0;line-height:12px"><span style="color:${ff?'#04101e':'color-mix(in srgb,'+c+' 52%,#666)'}">${f[0]}</span><span style="color:${ff?'#04101e':'var(--ink)'}">${f[1]}</span></div>
+        <div style="height:1px;background:${ff?'rgba(4,16,30,.5)':'#1b1b23'};margin:1px 3px 0"></div></div>`;
+    });
+  });
+  html+=miniPat()+foot('<span class="k">←→</span> section · <span class="k">↑↓</span> param · <span class="k">W/S</span> edit');
+  dev.innerHTML=html;
+}
+
+/* ---------- captions ---------- */
+const NOTES={
+0:{t:'TODAY · the shipped v3',tag:'now',idea:'The current ENGINE page. Five collapsed section rows, each with up to five inline LABEL value fields, an accordion foldout on ENTER, and a viz+AMP-ENV dock pinned to the bottom.',
+  good:['Every param is one keystroke away — fast, flat nav','You can see a lot at once'],
+  bad:['<b>25 numbers in the top third</b> read as one block — „viele Zahlen und Buchstaben"','Nothing for the eye to rest on — „nur Text, demotiviert"','<b>Dead void</b> in the middle; everything crammed up top'],
+  says:'From the chat: „mann sind das viele Zahlen und Buchstaben … alles im oberen Drittel, mega viel Platz."'},
+1:{t:'PANELS · glyphs you read at a glance',tag:'boxes',idea:'Bring the old boxes back, but each box leads with a PICTURE, not numbers. A tiny waveform, an envelope curve, a step grid, a comp/gain meter. The panels spread across the whole screen so the empty middle is gone. ENTER drills a panel open to its full values.',
+  good:['<b>The eye lands on the glyph</b>, not a wall of text — the old-box calm we lost','Fills the whole canvas — no dead void','Each section has a fixed PLACE → you navigate by shape, not by reading','Glyphs animate live (waveform, spectrum) so the page feels alive'],
+  bad:['Fewer exact numbers visible at rest (the hero value + glyph only)','2-D nav; editing a buried param needs an ENTER first'],
+  says:'From the chat: „kleine Visus, die irgendwie Infos rüberbringen — env-Reihe nur n kleiner env-Glyph, Mix kleine Gain/Comp-Anzeige."'},
+2:{t:'FOCUS · calm list + one big preview',tag:'SOURCE-like',idea:'Exactly how the SOURCE page already works: a quiet single-column list on the left, and a BIG live preview on the right that becomes whatever you are touching — the envelope curve on ENV, the waveform on SOURCE, the step grid on PATTERN, gain/comp on MIX. One anchor, always.',
+  good:['Kills the wall — left side shows one value column, not five','<b>One big anchor</b> in the dead space that means something','Nav stays a fast vertical list — the speed worry is safe','Visually consistent with the SOURCE page'],
+  bad:['Only the focused section\'s params are expanded at once','Right half is "spent" on preview (but it was empty before)'],
+  says:'From the chat: „vllt so wie bei Source — die Overview zeigt kleine Visus statt der ganzen Values."'},
+3:{t:'BREATHE · same model, just let it breathe',tag:'low-risk',idea:'The smallest change. Keep the exact inline-edit rows you have — but spread the five sections down the FULL height with air, and give each a glyph anchor on the left. The block becomes five calm bands instead of one batzen. Nav and editing are unchanged.',
+  good:['<b>Identical interaction</b> to today — zero relearning, no slower nav','Breaks the block into five anchored bands — "die Zeilen müssen gebrochen werden"','Uses the whole screen; glyph per row gives the eye an anchor','Cheapest to build of all four'],
+  bad:['Still more text-forward than PANELS/HERO','Glyphs are small (row-height) so less of a "wow"'],
+  says:'From the chat: „durch mehrere Reihen die Zeilen etwas brechen, dann wirkt das nicht mehr wie ein Batzen."'},
+4:{t:'HERO · the engine is the star',tag:'bold',idea:'My opinionated take. At rest the page is the engine: a big live visualizer fills the top, and one row of tiny summary chips below carries each section\'s headline (ENV curve, PAT 16·1/16, MIX 0dB). Touch a chip → its params bloom at the bottom. The hero never leaves.',
+  good:['<b>Almost no text at rest</b> — most "instrument", least "spreadsheet"','The viz IS the anchor and the wow; fills all the space','Chips still answer the "ah, this exists" worry with a headline each'],
+  bad:['Fewest exact values visible at rest — relies on bloom','Biggest departure → most to build + most to A/B on hardware'],
+  says:'From the chat: „was stört ist, dass sich alles im oberen Drittel abspielt … so mega viel Platz." → give the space to the engine.'},
+5:{t:'RASTER · the mixer page family',tag:'grid',idea:'Take the new MIXER page look — a raster of boxes, not rows — and apply it to ENGINE so the two pages feel like one family. Each section is a boxed strip with a colour rule, a small visual, and its key values kept visible. Boxes instead of zeilen, but it keeps the info density today\'s power users rely on.',
+  good:['<b>Boxes, not a block</b> — same raster rhythm as the MIXER page','Keeps most values visible (no glance-only loss) while still being boxed','Per-box mini-viz means the global bottom visualizer can go away','Distinct from the SOURCE page → ENGINE/MIX read as a set'],
+  bad:['Denser than PANELS/HERO — less "calm", more "console"','Boxed grid + matrix is the most layout work to get pixel-tight'],
+  says:'From the chat: „dieses raster layout … boxen anstatt zeilen … das könnte auch in richtung neuer mixerpage gehen."'}
+};
+function renderNote(){
+  const n=NOTES[S.v];
+  let li=n.good.map(g=>`<li>${g}</li>`).join('')+n.bad.map(b=>`<li class="minus">${b}</li>`).join('');
+  document.getElementById('note').innerHTML=
+    `<h2><span class="tag">${n.tag}</span>${n.t}</h2><div class="idea">${n.idea}</div><ul>${li}</ul>`
+    +`<div class="says">${n.says}</div>`
+    +`<div class="keys"><kbd>1</kbd>–<kbd>5</kbd> layout &nbsp; <kbd>q</kbd>/<kbd>e</kbd> engine &nbsp; <kbd>←→↑↓</kbd> nav &nbsp; <kbd>↵</kbd> open &nbsp; <kbd>esc</kbd> back &nbsp; <kbd>w</kbd>/<kbd>s</kbd> value</div>`;
+}
+
+/* ---------- dispatch ---------- */
+function render(){
+  [renderToday,renderPanels,renderFocus,renderBreathe,renderHero,renderRaster][S.v]();
+  document.querySelectorAll('button.tab[data-v]').forEach(b=>b.classList.toggle('on',+b.dataset.v===S.v));
+  document.querySelectorAll('button.eng').forEach(b=>b.classList.toggle('on',b.dataset.e===S.e));
+  renderNote();
+}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+
+function nav(k){
+  const sc=secs();const n=sc.length;
+  if(S.v===0||S.v===3){ // stream nav (today / breathe)
+    if(S.v===0&&S.exp>=0){ // expanded accordion
+      const fr=sc[S.exp].full;
+      if(k==='up')S.field=clamp(S.field-1,0,fr.length-1);
+      if(k==='down')S.field=clamp(S.field+1,0,fr.length-1);
+      if(k==='enter'||k==='esc'||k==='left'){S.sec=S.exp;S.exp=-1;S.field=0;}
+      return;
+    }
+    if(k==='up')S.sec=clamp(S.sec-1,0,n-1);
+    if(k==='down')S.sec=clamp(S.sec+1,0,n-1);
+    const fl=(sc[S.sec].inline||sc[S.sec].full);
+    if(k==='left')S.field=clamp(S.field-1,0,fl.length-1);
+    if(k==='right')S.field=clamp(S.field+1,0,fl.length-1);
+    S.field=clamp(S.field,0,fl.length-1);
+    if(k==='enter')S.exp=S.sec,S.field=0;
+  } else if(S.v===1){ // panels grid (3 cols, sc.length+1 cells)
+    if(S.panOpen){
+      const fr=sc[S.pan].full;
+      if(k==='up')S.panRow=clamp(S.panRow-1,0,fr.length-1);
+      if(k==='down')S.panRow=clamp(S.panRow+1,0,fr.length-1);
+      if(k==='enter'||k==='esc'||k==='left'){S.panOpen=false;}
+      return;
+    }
+    const total=n+1; // include viz cell, but don't let cursor rest on it for edit
+    if(k==='left')S.pan=clamp(S.pan-1,0,n-1);
+    if(k==='right')S.pan=clamp(S.pan+1,0,n-1);
+    if(k==='up')S.pan=clamp(S.pan-3,0,n-1);
+    if(k==='down')S.pan=clamp(S.pan+3,0,n-1);
+    if(k==='enter'){S.panOpen=true;S.panRow=0;}
+  } else if(S.v===2){ // focus rail
+    const fr=sc[S.fsec].full;
+    if(k==='up'){ if(S.ffield>0)S.ffield--; else if(S.fsec>0){S.fsec--;S.ffield=sc[S.fsec].full.length-1;} }
+    if(k==='down'){ if(S.ffield<fr.length-1)S.ffield++; else if(S.fsec<n-1){S.fsec++;S.ffield=0;} }
+    if(k==='right'||k==='enter'){S.fsec=clamp(S.fsec+1,0,n-1);S.ffield=0;}
+    if(k==='left'){S.fsec=clamp(S.fsec-1,0,n-1);S.ffield=0;}
+  } else if(S.v===4){ // hero chips
+    if(S.chipOpen){
+      const fr=sc[S.chip].full;
+      if(k==='up')S.chipRow=clamp(S.chipRow-1,0,fr.length-1);
+      if(k==='down')S.chipRow=clamp(S.chipRow+1,0,fr.length-1);
+      if(k==='enter'||k==='esc'){S.chipOpen=false;}
+      return;
+    }
+    if(k==='left')S.chip=clamp(S.chip-1,0,n-1);
+    if(k==='right')S.chip=clamp(S.chip+1,0,n-1);
+    if(k==='enter'){S.chipOpen=true;S.chipRow=0;}
+  } else if(S.v===5){ // raster columns
+    if(k==='left')S.rcol=clamp(S.rcol-1,0,n-1);
+    if(k==='right')S.rcol=clamp(S.rcol+1,0,n-1);
+    const fl=(sc[S.rcol].inline||sc[S.rcol].full);
+    if(k==='up')S.rrow=clamp(S.rrow-1,0,Math.min(4,fl.length-1));
+    if(k==='down')S.rrow=clamp(S.rrow+1,0,Math.min(4,fl.length-1));
+    S.rrow=clamp(S.rrow,0,Math.min(4,fl.length-1));
+  }
+}
+
+document.addEventListener('keydown',ev=>{
+  const k=ev.key;
+  if(k>='1'&&k<='6'){S.v=+k-1;render();ev.preventDefault();return;}
+  if(k==='q'||k==='e'){const ks=Object.keys(ENGINES);let i=ks.indexOf(S.e);i=(i+(k==='e'?1:ks.length-1))%ks.length;S.e=ks[i];
+    S.sec=S.field=S.pan=S.fsec=S.ffield=S.chip=S.rcol=S.rrow=0;S.exp=-1;S.panOpen=S.chipOpen=false;render();ev.preventDefault();return;}
+  const map={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right',Enter:'enter',Escape:'esc'};
+  if(map[k]){nav(map[k]);render();ev.preventDefault();return;}
+  // w/s value nudge -> just a visual cue flash on the focused thing (sketch only)
+  if(k==='w'||k==='s'){dev.style.outline='1px solid rgba(64,140,220,.6)';setTimeout(()=>dev.style.outline='',90);}
+});
+document.querySelectorAll('button.tab[data-v]').forEach(b=>b.onclick=()=>{S.v=+b.dataset.v;dev.focus();render();});
+document.querySelectorAll('button.eng').forEach(b=>b.onclick=()=>{S.e=b.dataset.e;
+  S.sec=S.field=S.pan=S.fsec=S.ffield=S.chip=S.rcol=S.rrow=0;S.exp=-1;S.panOpen=S.chipOpen=false;dev.focus();render();});
+
+/* URL state: ?v=0..4 layout, ?e=sampler|miplaits|wave|drum, ?open=1 (drill open), ?sec=, ?field= */
+(function(){const q=new URLSearchParams(location.search);
+  if(q.has('v'))S.v=clamp(+q.get('v'),0,4);
+  if(q.has('e')&&ENGINES[q.get('e')])S.e=q.get('e');
+  if(q.has('sec')){const n=+q.get('sec');S.sec=S.pan=S.fsec=S.chip=n;}
+  if(q.has('field')){const n=+q.get('field');S.field=S.ffield=S.panRow=S.chipRow=n;}
+  if(q.get('open')==='1'){S.exp=S.sec;S.panOpen=true;S.chipOpen=true;}
+})();
+
+/* fit device to window so it never clips, crisp ×2 when there's room */
+function fitDevice(){
+  const sc=document.querySelector('.scaler');
+  const avail=Math.min(window.innerWidth-52, 1080);
+  const s=Math.max(1.35, Math.min(2, avail/480));
+  dev.style.transform='scale('+s+')';
+  sc.style.width=(480*s)+'px'; sc.style.height=(320*s)+'px';
+}
+window.addEventListener('resize',fitDevice);
+fitDevice();
+
+/* bare mode: device only, fixed ×2 (for clean still capture) */
+if(new URLSearchParams(location.search).get('bare')==='1'){
+  document.body.style.padding='0';document.body.style.background='#06060a';
+  ['h1','.sub','.bar','.note','.hintbar'].forEach(s=>{const el=document.querySelector(s);if(el)el.style.display='none';});
+  const sc=document.querySelector('.scaler');sc.style.border='none';sc.style.borderRadius='0';sc.style.boxShadow='none';
+  const w=document.querySelector('.wrap');w.style.gap='0';w.style.padding='0';
+  dev.style.transform='scale(2)';sc.style.width='960px';sc.style.height='640px';
+}
+
+/* anim loop for live glyphs */
+function loop(){T++;render();requestAnimationFrame(()=>setTimeout(loop,90));}
+render();loop();
+dev.focus({preventScroll:true});
+</script>
