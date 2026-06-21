@@ -158,7 +158,7 @@ button.eng.on{background:#2e6f88;border-color:#2e6f88;color:#eafdff}
 <h1>SINCHELLES — <b>ENGINE page</b> redesign sketch</h1>
 <div class="sub">
 The shipped <b>v3 layout</b> (tab <b>0 · TODAY</b>) is the one in use today: 25 label+value pairs stacked in the top
-third as one block, a dead void in the middle, the eye with nothing to land on. Tabs <b>1–5</b> are five different ways out —
+third as one block, a dead void in the middle, the eye with nothing to land on. Tabs <b>1–7</b> are different ways out —
 each attacks <i>density</i>, <i>anchor</i> and <i>wasted space</i> differently. Click the device, then drive it with the keyboard.
 </div>
 
@@ -170,6 +170,8 @@ each attacks <i>density</i>, <i>anchor</i> and <i>wasted space</i> differently. 
     <button class="tab" data-v="3">3 · BREATHE</button>
     <button class="tab" data-v="4">4 · HERO</button>
     <button class="tab" data-v="5">5 · RASTER</button>
+    <button class="tab" data-v="6">6 · ROW VIZ</button>
+    <button class="tab" data-v="7">7 · 4+VIZ</button>
   </div>
   <div class="grp"><span class="lbl">Engine</span>
     <button class="tab eng" data-e="sampler">SAMPLER</button>
@@ -491,6 +493,56 @@ function renderRaster(){
   dev.innerHTML=html;
 }
 
+/* ============================================================= ROW VIZ (mockup + per-row visualizer below) */
+function renderRowsViz(){
+  const sc=secs();let html=crumb();
+  const fsec=sc[S.sec];const c0=rc(fsec.id);const fl0=(fsec.inline||fsec.full);
+  html+=`<div class="subhdr"><span class="nm" style="color:${c0}">◆ ${fl0[Math.min(S.field,fl0.length-1)][0]}</span><span class="ds">${fsec.id} · row + visualizer below</span></div>`;
+  const top=30, bottom=284, bh=(bottom-top)/sc.length;
+  const cols=[66,147,228,309,390];
+  sc.forEach((sec,si)=>{
+    const c=rc(sec.id),foc=(si===S.sec);const y=top+si*bh;const flds=(sec.inline||sec.full);
+    if(foc){
+      html+=`<div style="position:absolute;left:0;right:0;top:${y}px;height:${bh-2}px;background:linear-gradient(180deg,rgba(40,16,22,.55),rgba(18,9,12,0) 70%)"></div>`;
+      html+=`<div style="position:absolute;left:2px;top:${y}px;width:4px;height:13px;background:var(--rail)"></div>`;}
+    html+=`<div style="position:absolute;left:10px;top:${y+3}px;font-size:8px;letter-spacing:.5px;color:${foc?c:'color-mix(in srgb,'+c+' 78%,#000)'}">${sec.id}</div>`;
+    flds.slice(0,5).forEach((f,fi)=>{const pill=foc&&fi===S.field;
+      html+=`<div style="position:absolute;left:${cols[fi]/480*100}%;top:${y+3}px;font-size:8px;display:flex;gap:5px;white-space:nowrap;${pill?'background:var(--pill);padding:0 3px;border-radius:1px':''}">
+        <span style="color:${pill?'#04101e':(foc?c:'color-mix(in srgb,'+c+' 45%,#555)')}">${f[0]}</span>
+        <span style="color:${pill?'#04101e':(foc?'var(--hi)':'var(--ink)')}">${f[1]}</span></div>`;});
+    const vy=y+15, vh=Math.max(18,bh-19);
+    html+=`<div style="position:absolute;left:10px;right:10px;top:${vy}px;height:${vh}px;opacity:${foc?1:.5}">${sectionPreview(sec,eng(),c,T,460,vh)}</div>`;
+    if(si<sc.length-1)html+=`<div style="position:absolute;left:6px;right:6px;top:${y+bh-1}px;height:1px;background:#141419"></div>`;
+  });
+  html+=miniPat()+foot('<span class="k">↑↓</span> section · <span class="k">↔</span> field · <span class="k">W/S</span> edit');
+  dev.innerHTML=html;
+}
+
+/* ============================================================= 4 + VIZ (four params, visualizer in the 5th slot) */
+function renderInlineViz(){
+  const sc=secs();let html=crumb();
+  const fsec=sc[S.sec];const c0=rc(fsec.id);const fl0=(fsec.inline||fsec.full);
+  html+=`<div class="subhdr"><span class="nm" style="color:${c0}">◆ ${fl0[Math.min(S.field,3,fl0.length-1)][0]}</span><span class="ds">${fsec.id} · 4 params + visualizer</span></div>`;
+  const top=32, bottom=284, bh=(bottom-top)/sc.length;
+  const cols=[66,147,228,309];
+  sc.forEach((sec,si)=>{
+    const c=rc(sec.id),foc=(si===S.sec);const y=top+si*bh;const flds=(sec.inline||sec.full);
+    const fy=y+(bh-8)/2;
+    if(foc){
+      html+=`<div style="position:absolute;left:0;right:0;top:${y}px;height:${bh-2}px;background:linear-gradient(90deg,rgba(40,16,22,.75),rgba(18,9,12,0))"></div>`;
+      html+=`<div style="position:absolute;left:2px;top:${y+2}px;width:4px;height:${bh-6}px;background:var(--rail)"></div>`;}
+    html+=`<div style="position:absolute;left:10px;top:${fy}px;font-size:8px;letter-spacing:.5px;color:${foc?c:'color-mix(in srgb,'+c+' 78%,#000)'}">${sec.id}</div>`;
+    flds.slice(0,4).forEach((f,fi)=>{const pill=foc&&fi===S.field;
+      html+=`<div style="position:absolute;left:${cols[fi]/480*100}%;top:${fy}px;font-size:8px;display:flex;gap:5px;white-space:nowrap;${pill?'background:var(--pill);padding:0 3px;border-radius:1px':''}">
+        <span style="color:${pill?'#04101e':(foc?c:'color-mix(in srgb,'+c+' 45%,#555)')}">${f[0]}</span>
+        <span style="color:${pill?'#04101e':(foc?'var(--hi)':'var(--ink)')}">${f[1]}</span></div>`;});
+    html+=`<div style="position:absolute;left:362px;top:${y+4}px;width:110px;height:${bh-9}px;opacity:${foc?1:.6}">${glyph(sec.glyph,c,T)}</div>`;
+    if(si<sc.length-1)html+=`<div style="position:absolute;left:6px;right:6px;top:${y+bh-1}px;height:1px;background:#141419"></div>`;
+  });
+  html+=miniPat()+foot('<span class="k">↑↓</span> section · <span class="k">↔</span> field · <span class="k">W/S</span> edit');
+  dev.innerHTML=html;
+}
+
 /* ---------- captions ---------- */
 const NOTES={
 0:{t:'TODAY · the shipped v3',tag:'now',idea:'The current ENGINE page. Five collapsed section rows, each with up to five inline LABEL value fields, an accordion foldout on ENTER, and a viz+AMP-ENV dock pinned to the bottom.',
@@ -516,7 +568,15 @@ const NOTES={
 5:{t:'RASTER · the mixer page family',tag:'grid',idea:'Take the new MIXER page look — a raster of boxes, not rows — and apply it to ENGINE so the two pages feel like one family. Each section is a boxed strip with a colour rule, a small visual, and its key values kept visible. Boxes instead of zeilen, but it keeps the info density today\'s power users rely on.',
   good:['<b>Boxes, not a block</b> — same raster rhythm as the MIXER page','Keeps most values visible (no glance-only loss) while still being boxed','Per-box mini-viz means the global bottom visualizer can go away','Distinct from the SOURCE page → ENGINE/MIX read as a set'],
   bad:['Denser than PANELS/HERO — less "calm", more "console"','Boxed grid + matrix is the most layout work to get pixel-tight'],
-  says:'From the chat: „dieses raster layout … boxen anstatt zeilen … das könnte auch in richtung neuer mixerpage gehen."'}
+  says:'From the chat: „dieses raster layout … boxen anstatt zeilen … das könnte auch in richtung neuer mixerpage gehen."'},
+6:{t:'ROW VIZ · the mockup, plus a visualizer per row',tag:'mockup',idea:'The current stream, spaced out exactly like the mockup — but the gap under each row holds a per-category visualizer (waveform under SOURCE, the env curve under ENV, the step grid under PATTERN…). Fast horizontal nav stays identical to today; the empty gaps become live per-category visuals, so the one global bottom dock can go.',
+  good:['<b>Same fast nav as today</b> — nothing relearned','Every category gets its own moving visual, right where it lives','Fills the gap the mockup left empty — no dead void','Per-row viz replaces the single global dock'],
+  bad:['Five visualizers at once can get busy — needs restraint','Less height per viz than FOCUS or HERO give one'],
+  says:'From the chat: „der platz für foldout ist schon da + platz für visualizer … wenn die zeile drunter irgendwelche visus hat."'},
+7:{t:'4 + VIZ · four params, a visual in the fifth slot',tag:'inline',idea:'Like today, but each row shows four values and the fifth column becomes a small per-category visualizer instead of a fifth number. You trade one number for a live anchor on every row — no extra page furniture, the rows just spread a little to give the visual some height.',
+  good:['Per-category visual with <b>almost zero layout change</b> — it lives in the row','Drops one number per row → less text, more signal','Fast nav unchanged; global dock can go'],
+  bad:['The fifth param moves into the foldout / loses its at-rest slot','Small viz — an anchor, not a showpiece'],
+  says:'From the chat: „per-kategorie visualizer … kann man den unten auch weg machen."'}
 };
 function renderNote(){
   const n=NOTES[S.v];
@@ -529,7 +589,7 @@ function renderNote(){
 
 /* ---------- dispatch ---------- */
 function render(){
-  [renderToday,renderPanels,renderFocus,renderBreathe,renderHero,renderRaster][S.v]();
+  [renderToday,renderPanels,renderFocus,renderBreathe,renderHero,renderRaster,renderRowsViz,renderInlineViz][S.v]();
   document.querySelectorAll('button.tab[data-v]').forEach(b=>b.classList.toggle('on',+b.dataset.v===S.v));
   document.querySelectorAll('button.eng').forEach(b=>b.classList.toggle('on',b.dataset.e===S.e));
   renderNote();
@@ -538,8 +598,8 @@ function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
 
 function nav(k){
   const sc=secs();const n=sc.length;
-  if(S.v===0||S.v===3){ // stream nav (today / breathe)
-    if(S.v===0&&S.exp>=0){ // expanded accordion
+  if(S.v===0||S.v===3||S.v===6||S.v===7){ // stream nav (today / breathe / row-viz / 4+viz)
+    if(S.v===0&&S.exp>=0){ // expanded accordion (TODAY only)
       const fr=sc[S.exp].full;
       if(k==='up')S.field=clamp(S.field-1,0,fr.length-1);
       if(k==='down')S.field=clamp(S.field+1,0,fr.length-1);
@@ -549,10 +609,11 @@ function nav(k){
     if(k==='up')S.sec=clamp(S.sec-1,0,n-1);
     if(k==='down')S.sec=clamp(S.sec+1,0,n-1);
     const fl=(sc[S.sec].inline||sc[S.sec].full);
-    if(k==='left')S.field=clamp(S.field-1,0,fl.length-1);
-    if(k==='right')S.field=clamp(S.field+1,0,fl.length-1);
-    S.field=clamp(S.field,0,fl.length-1);
-    if(k==='enter')S.exp=S.sec,S.field=0;
+    const maxF=(S.v===7)?Math.min(4,fl.length):fl.length; // 4+VIZ edits 4 fields
+    if(k==='left')S.field=clamp(S.field-1,0,maxF-1);
+    if(k==='right')S.field=clamp(S.field+1,0,maxF-1);
+    S.field=clamp(S.field,0,maxF-1);
+    if(k==='enter'&&S.v===0){S.exp=S.sec;S.field=0;} // only TODAY expands
   } else if(S.v===1){ // panels grid (3 cols, sc.length+1 cells)
     if(S.panOpen){
       const fr=sc[S.pan].full;
@@ -596,7 +657,7 @@ function nav(k){
 
 document.addEventListener('keydown',ev=>{
   const k=ev.key;
-  if(k>='1'&&k<='6'){S.v=+k-1;render();ev.preventDefault();return;}
+  if(k>='1'&&k<='8'){S.v=+k-1;render();ev.preventDefault();return;}
   if(k==='q'||k==='e'){const ks=Object.keys(ENGINES);let i=ks.indexOf(S.e);i=(i+(k==='e'?1:ks.length-1))%ks.length;S.e=ks[i];
     S.sec=S.field=S.pan=S.fsec=S.ffield=S.chip=S.rcol=S.rrow=0;S.exp=-1;S.panOpen=S.chipOpen=false;render();ev.preventDefault();return;}
   const map={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right',Enter:'enter',Escape:'esc'};
@@ -610,7 +671,7 @@ document.querySelectorAll('button.eng').forEach(b=>b.onclick=()=>{S.e=b.dataset.
 
 /* URL state: ?v=0..4 layout, ?e=sampler|miplaits|wave|drum, ?open=1 (drill open), ?sec=, ?field= */
 (function(){const q=new URLSearchParams(location.search);
-  if(q.has('v'))S.v=clamp(+q.get('v'),0,5);
+  if(q.has('v'))S.v=clamp(+q.get('v'),0,7);
   if(q.has('e')&&ENGINES[q.get('e')])S.e=q.get('e');
   if(q.has('sec')){const n=+q.get('sec');S.sec=S.pan=S.fsec=S.chip=S.rcol=n;}
   if(q.has('field')){const n=+q.get('field');S.field=S.ffield=S.panRow=S.chipRow=S.rrow=n;}

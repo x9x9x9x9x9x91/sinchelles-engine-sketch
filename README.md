@@ -5,7 +5,7 @@ Open **`index.html`** in a browser. Click the device, then drive it:
 - `1`–`5` switch layout · `q`/`e` switch engine
 - `← → ↑ ↓` navigate · `ENTER` open/drill · `ESC` back · `w`/`s` nudge a value
 
-Six tabs:
+Eight tabs:
 
 - **0 · TODAY** — the shipped v3 layout, for A/B. The one in use today.
 - **1 · PANELS** *(boxes + glyphs)* — old boxes back, but each leads with a *picture* (waveform, env curve, step grid, comp/gain), spread across the whole screen. ENTER drills a panel open.
@@ -13,6 +13,8 @@ Six tabs:
 - **3 · BREATHE** *(lowest risk)* — exact same inline rows as today, just spread down the full height with a glyph anchor per row. Nav unchanged.
 - **4 · HERO** *(bold)* — the engine is the star: big visualizer on top, tiny summary chips below, params bloom only when you ask.
 - **5 · RASTER** *(mixer-page family)* — boxes not rows, in the new MIXER page's raster idiom: section columns with a colour rule + mini-viz + a kept-visible value matrix. Keeps today's info density.
+- **6 · ROW VIZ** *(the mockup + viz)* — today's stream spaced like the mockup, with a per-category visualizer filling the gap under each row. Fast nav unchanged; the global bottom dock goes away.
+- **7 · 4+VIZ** — like today, but each row shows four params and the fifth slot becomes a small per-category visualizer instead of a fifth number.
 
 ## The diagnosis (why it feels dense)
 
