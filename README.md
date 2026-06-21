@@ -16,7 +16,7 @@ Eight tabs:
 - **6 · ROW VIZ** — today's stream with a per-category visualizer under each row. *(Not a keeper — too busy.)*
 - **★ 7 · 7×TODAY** *(refined)* — today's density + fast nav, with boxed section labels + dividers for separation; the envelope curve is the one kept viz (inline under the ENV row). Closest to today.
 
-The **★ three** (3, 5, 7) are the ones liked + refined per feedback: boxes/separation added, decorative visualizers dropped, only the envelope kept.
+The **★ three** (3, 5, 7) are the ones liked + refined per feedback: boxes/separation added, decorative visualizers dropped, only the envelope kept. Each now has a **foldout** — press **ENTER** on a section to drill in to *all* its params as bars with the **live modulation meter** (base tick + swing band + live head + source cue), the thing the curated collapsed view leaves out. ESC/← closes. #7 also has a clearly **separated category column** on the left.
 
 ## The diagnosis (why it feels dense)
 

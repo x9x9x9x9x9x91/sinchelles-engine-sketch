@@ -665,43 +665,42 @@ const NOTES={
 0:{t:'TODAY · the shipped v3',tag:'now',idea:'The current ENGINE page. Five collapsed section rows, each with up to five inline LABEL value fields, an accordion foldout on ENTER, and a viz+AMP-ENV dock pinned to the bottom.',
   good:['Every param is one keystroke away — fast, flat nav','You can see a lot at once'],
   bad:['<b>25 numbers in the top third</b> read as one block — „viele Zahlen und Buchstaben"','Nothing for the eye to rest on — „nur Text, demotiviert"','<b>Dead void</b> in the middle; everything crammed up top'],
-  says:'From the chat: „mann sind das viele Zahlen und Buchstaben … alles im oberen Drittel, mega viel Platz."'},
+  },
 1:{t:'PANELS · glyphs you read at a glance',tag:'boxes',idea:'Bring the old boxes back, but each box leads with a PICTURE, not numbers. A tiny waveform, an envelope curve, a step grid, a comp/gain meter. The panels spread across the whole screen so the empty middle is gone. ENTER drills a panel open to its full values.',
   good:['<b>The eye lands on the glyph</b>, not a wall of text — the old-box calm we lost','Fills the whole canvas — no dead void','Each section has a fixed PLACE → you navigate by shape, not by reading','Glyphs animate live (waveform, spectrum) so the page feels alive'],
   bad:['Fewer exact numbers visible at rest (the hero value + glyph only)','2-D nav; editing a buried param needs an ENTER first'],
-  says:'From the chat: „kleine Visus, die irgendwie Infos rüberbringen — env-Reihe nur n kleiner env-Glyph, Mix kleine Gain/Comp-Anzeige."'},
+  },
 2:{t:'FOCUS · calm list + one big preview',tag:'SOURCE-like',idea:'Exactly how the SOURCE page already works: a quiet single-column list on the left, and a BIG live preview on the right that becomes whatever you are touching — the envelope curve on ENV, the waveform on SOURCE, the step grid on PATTERN, gain/comp on MIX. One anchor, always.',
   good:['Kills the wall — left side shows one value column, not five','<b>One big anchor</b> in the dead space that means something','Nav stays a fast vertical list — the speed worry is safe','Visually consistent with the SOURCE page'],
   bad:['Only the focused section\'s params are expanded at once','Right half is "spent" on preview (but it was empty before)'],
-  says:'From the chat: „vllt so wie bei Source — die Overview zeigt kleine Visus statt der ganzen Values."'},
+  },
 3:{t:'BOXES · separated cards (refined)',tag:'★ liked',idea:'Refined per the feedback: each section is now its own bordered CARD with a role-coloured edge and a boxed name chip — clear separation, no more block. The decorative visualizers are gone; only the envelope curve stays (it lives in the ENV card). Spacious, the old-2×2 calm as full-width rows.',
   good:['<b>Real boxes</b> — every section walled off, the "abtrennen" ask','Only the envelope viz remains — no superfluous visuals','Airy and calm; the eye rests on one card at a time','Nav and editing identical to today'],
   bad:['Most vertical space per section → fewer can be very dense','Borders everywhere is a strong, opinionated look'],
-  says:'From the chat: „bräuchte nur hier noch so boxen oder iwas, was das abtrennt … die visualizer sind bis auf envelope überflüssig."'},
+  },
 4:{t:'HERO · the engine is the star',tag:'bold',idea:'My opinionated take. At rest the page is the engine: a big live visualizer fills the top, and one row of tiny summary chips below carries each section\'s headline (ENV curve, PAT 16·1/16, MIX 0dB). Touch a chip → its params bloom at the bottom. The hero never leaves.',
   good:['<b>Almost no text at rest</b> — most "instrument", least "spreadsheet"','The viz IS the anchor and the wow; fills all the space','Chips still answer the "ah, this exists" worry with a headline each'],
   bad:['Fewest exact values visible at rest — relies on bloom','Biggest departure → most to build + most to A/B on hardware'],
-  says:'From the chat: „was stört ist, dass sich alles im oberen Drittel abspielt … so mega viel Platz." → give the space to the engine.'},
+  },
 5:{t:'RASTER · the mixer page family (refined)',tag:'★ liked',idea:'The new MIXER page look applied to ENGINE — section columns, a value matrix, one family with the mixer. Refined: the decorative per-column visuals are gone; each column is now a clean value matrix, and only the ENV column carries a visual (its curve on top). Boxes instead of zeilen, full info density.',
   good:['<b>Boxes, not a block</b> — same raster rhythm as the MIXER page','Full value matrix kept — densest, most info at rest','Only the envelope viz remains; the rest is clean values','ENGINE + MIXER read as one set'],
   bad:['The most "console", least "calm" of the three','Boxed grid + matrix is the most layout work to get pixel-tight'],
-  says:'From the chat: „#5 ist auch interessant … dieses raster layout, boxen anstatt zeilen."'},
+  },
 6:{t:'ROW VIZ · the mockup, plus a visualizer per row',tag:'mockup',idea:'The current stream, spaced out exactly like the mockup — but the gap under each row holds a per-category visualizer (waveform under SOURCE, the env curve under ENV, the step grid under PATTERN…). Fast horizontal nav stays identical to today; the empty gaps become live per-category visuals, so the one global bottom dock can go.',
   good:['<b>Same fast nav as today</b> — nothing relearned','Every category gets its own moving visual, right where it lives','Fills the gap the mockup left empty — no dead void','Per-row viz replaces the single global dock'],
   bad:['Five visualizers at once can get busy — needs restraint','Less height per viz than FOCUS or HERO give one'],
-  says:'From the chat: „der platz für foldout ist schon da + platz für visualizer … wenn die zeile drunter irgendwelche visus hat."'},
+  },
 7:{t:'7 × TODAY · compact + boxed (refined)',tag:'★ liked',idea:'The mix of #7 and today you asked for: today\'s full density and fast nav, but each section gets a boxed label and a divider so the block reads as separated rows. The superfluous visualizers are gone — only the envelope curve stays, sitting inline under the ENV row. Closest to today of the three; least to relearn.',
   good:['<b>Today\'s speed + density</b>, just separated and boxed','Boxed labels + dividers = the "abtrennen" without big cards','Only the envelope viz — no decorative clutter','Smallest change from the shipped layout'],
   bad:['Flatter / less dramatic than BOXES or RASTER','The envelope is the only visual — by design'],
-  says:'From the chat: „7 und 3 find ich ok … so ne mischung aus 7 und jetzt … bis auf envelope überflüssig."'}
+  }
 };
 function renderNote(){
   const n=NOTES[S.v];
   let li=n.good.map(g=>`<li>${g}</li>`).join('')+n.bad.map(b=>`<li class="minus">${b}</li>`).join('');
   document.getElementById('note').innerHTML=
     `<h2><span class="tag">${n.tag}</span>${n.t}</h2><div class="idea">${n.idea}</div><ul>${li}</ul>`
-    +`<div class="says">${n.says}</div>`
-    +`<div class="keys"><kbd>1</kbd>–<kbd>5</kbd> layout &nbsp; <kbd>q</kbd>/<kbd>e</kbd> engine &nbsp; <kbd>←→↑↓</kbd> nav &nbsp; <kbd>↵</kbd> open &nbsp; <kbd>esc</kbd> back &nbsp; <kbd>w</kbd>/<kbd>s</kbd> value</div>`;
+    +`<div class="keys"><kbd>1</kbd>–<kbd>8</kbd> layout &nbsp; <kbd>q</kbd>/<kbd>e</kbd> engine &nbsp; <kbd>←→↑↓</kbd> nav &nbsp; <kbd>↵</kbd> open &nbsp; <kbd>esc</kbd> back &nbsp; <kbd>w</kbd>/<kbd>s</kbd> value</div>`;
 }
 
 /* ---------- dispatch ---------- */
