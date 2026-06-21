@@ -609,13 +609,14 @@ function renderInlineViz(){
   const sc=secs();let html=crumb();
   const bodyTop=28, bodyBot=284, catW=78, px=catW+8;
   const cols=[catW+8, catW+82, catW+156, catW+230, catW+304];
-  // a tidy table column: per-section CELL (subtle fill + hairline + role tick + TOP-aligned
-  // name, no floating chip). Focused cell gets a clean role tint + bright name/tick.
-  const catCell=(y,h,c,foc,name)=>
-    `<div style="position:absolute;left:0;top:${y}px;width:${catW}px;height:${h}px;background:${foc?'rgba(214,84,96,.16)':'rgba(255,255,255,.022)'};border-bottom:1px solid rgba(255,255,255,.05)"></div>`
-   +`<div style="position:absolute;left:0;top:${y}px;width:3px;height:${h}px;background:${foc?'var(--rail)':'color-mix(in srgb,'+c+' 55%,#000)'}"></div>`
-   +`<div style="position:absolute;left:9px;top:${y+5}px;font-size:8px;letter-spacing:.4px;color:${foc?c:'color-mix(in srgb,'+c+' 80%,#000)'}">${name}</div>`;
-  const catDiv=(y,h)=>`<div style="position:absolute;left:${catW}px;top:${y}px;width:1px;height:${h}px;background:#2a2a34"></div>`;
+  // One table. The category name is the LEFT cell of each row (role tick + name on the SAME
+  // baseline as its params). No separate column background, so it doesn't read as a detached
+  // sidebar — rows are tied together by full-width horizontal lines crossing the divider (Tim).
+  const catDiv=(y,h)=>`<div style="position:absolute;left:${catW}px;top:${y}px;width:1px;height:${h}px;background:#202028"></div>`;
+  const hLine=(y)=>`<div style="position:absolute;left:0;right:0;top:${y}px;height:1px;background:rgba(255,255,255,.06)"></div>`;
+  const catLbl=(ty,rowY,rowH,c,foc,name)=>
+    `<div style="position:absolute;left:0;top:${rowY}px;width:3px;height:${rowH}px;background:${foc?'var(--rail)':'color-mix(in srgb,'+c+' 60%,#000)'}"></div>`
+   +`<div style="position:absolute;left:9px;top:${ty}px;font-size:8px;letter-spacing:.4px;color:${foc?c:'color-mix(in srgb,'+c+' 82%,#000)'}">${name}</div>`;
 
   if(S.exp>=0){
     // ---- accordion FOLDOUT: focused section -> full param bars + live mod; others thin ----
@@ -625,14 +626,15 @@ function renderInlineViz(){
     let y=bodyTop+2;
     sc.forEach((sec,si)=>{
       const c=rc(sec.id);
+      if(si>0)html+=hLine(y-1);
       if(si===S.exp){
         const bh2=Math.max(13,Math.min(18,(bodyBot-y-(sc.length-1-si)*18-2)/sec.full.length));
         const blockH=sec.full.length*bh2;
-        html+=catCell(y,blockH,c,true,sec.id);
+        html+=catLbl(y+4,y,blockH,c,true,sec.id);
         html+=foldoutBars(sec,c,px,y,480-px-8,blockH,S.field);
         y+=blockH+2;
       } else {
-        html+=catCell(y,18,c,false,sec.id);
+        html+=catLbl(y+5,y,18,c,false,sec.id);
         (sec.inline||sec.full).slice(0,5).forEach((f,fi)=>{
           html+=`<div style="position:absolute;left:${cols[fi]}px;top:${y+5}px;font-size:7.5px;display:flex;gap:4px;white-space:nowrap"><span style="color:color-mix(in srgb,${c} 42%,#555)">${f[0]}</span><span style="color:var(--ink)">${f[1]}</span></div>`;});
         y+=18;
@@ -642,24 +644,26 @@ function renderInlineViz(){
     dev.innerHTML=html;return;
   }
 
-  // ---- collapsed: compact aligned rows (category column | params) + env anchor below ----
+  // ---- collapsed: compact aligned rows (category cell | params) + env anchor below ----
   const fsec=sc[S.sec];const fl0=(fsec.inline||fsec.full);
-  html+=`<div class="subhdr"><span class="nm" style="color:${rc(fsec.id)}">◆ ${fl0[Math.min(S.field,fl0.length-1)][0]}</span><span class="ds">${fsec.id} · category column + params</span></div>`;
+  html+=`<div class="subhdr"><span class="nm" style="color:${rc(fsec.id)}">◆ ${fl0[Math.min(S.field,fl0.length-1)][0]}</span><span class="ds">${fsec.id} · category + params</span></div>`;
   const n=sc.length, rowH=22, rowsTop=bodyTop+2, rowsBot=rowsTop+n*rowH;
+  // focus band first (full width, behind the lines), then divider + full-width lines, then text
+  sc.forEach((sec,si)=>{ if(si===S.sec){const y=rowsTop+si*rowH;
+    html+=`<div style="position:absolute;left:0;right:0;top:${y}px;height:${rowH}px;background:rgba(214,84,96,.13)"></div>`;}});
   html+=catDiv(rowsTop,n*rowH);
+  for(let i=0;i<=n;i++)html+=hLine(rowsTop+i*rowH);   // lines extend across BOTH panes
   sc.forEach((sec,si)=>{
     const c=rc(sec.id),foc=(si===S.sec);const y=rowsTop+si*rowH;const flds=(sec.inline||sec.full);
-    if(foc)html+=`<div style="position:absolute;left:${catW+1}px;right:0;top:${y}px;height:${rowH}px;background:rgba(214,84,96,.12)"></div>`;
-    html+=`<div style="position:absolute;left:${catW+1}px;right:0;top:${y+rowH-1}px;height:1px;background:rgba(255,255,255,.045)"></div>`;
-    html+=catCell(y,rowH,c,foc,sec.id);
+    const ty=y+7;   // category name + params share this baseline
+    html+=catLbl(ty,y,rowH,c,foc,sec.id);
     flds.slice(0,5).forEach((f,fi)=>{const pill=foc&&fi===S.field;
-      html+=`<div style="position:absolute;left:${cols[fi]}px;top:${y+7}px;font-size:8px;display:flex;gap:5px;white-space:nowrap;${pill?'background:var(--pill);padding:0 3px;border-radius:1px':''}">
+      html+=`<div style="position:absolute;left:${cols[fi]}px;top:${ty}px;font-size:8px;display:flex;gap:5px;white-space:nowrap;${pill?'background:var(--pill);padding:0 3px;border-radius:1px':''}">
         <span style="color:${pill?'#04101e':(foc?c:'color-mix(in srgb,'+c+' 48%,#666)')}">${f[0]}</span>
         <span style="color:${pill?'#04101e':(foc?'var(--hi)':'var(--ink)')}">${f[1]}</span></div>`;});
   });
   // env anchor: the one kept visualizer, a full-width AMP ENV filling the space below
   const envTop=rowsBot+10;
-  html+=`<div style="position:absolute;left:0;right:0;top:${rowsBot+3}px;height:1px;background:#23232c"></div>`;
   html+=`<div style="position:absolute;left:10px;top:${envTop}px;font-size:8px;letter-spacing:1px;color:var(--ENV)">AMP ENV</div>`;
   html+=`<div style="position:absolute;left:10px;right:10px;top:${envTop+12}px;height:${bodyBot-(envTop+12)-2}px">${gEnvBig(rc('ENV'),460,bodyBot-(envTop+12)-2)}</div>`;
   html+=miniPat()+foot('<span class="k">↑↓</span> section · <span class="k">↔</span> field · <span class="k">ENT</span> open · <span class="k">W/S</span> edit');
