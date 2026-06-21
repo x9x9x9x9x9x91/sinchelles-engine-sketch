@@ -335,25 +335,29 @@ function miniPat(){let c='';for(let i=0;i<16;i++)c+=`<i class="${i===0?'cur':(i%
 function renderToday(){
   const sc=secs();let rows='';
   const cols=[66,147,228,309,390].map(x=>x/480*100); // % left positions ~ kFieldStartX + i*kColW
+  let y=30; // running cursor: an open foldout pushes the rows below it down (accordion)
   sc.forEach((sec,si)=>{
-    const c=rc(sec.id);const foc=(S.exp<0&&si===S.sec);
-    const flds=(S.exp===si)?[]:(sec.inline||sec.full).slice(0,5);
-    const y=30+si*16;
+    const c=rc(sec.id);
     if(S.exp===si){
-      // expanded accordion
+      // expanded accordion: header + full param bars, then advance y past them
       rows+=`<div style="position:absolute;left:0;right:0;top:${y}px;height:13px;background:#180e12;font-size:8.5px;display:flex;align-items:center;padding:0 10px;color:${c};letter-spacing:.5px"><span style="position:absolute;left:2px;width:4px;top:0;bottom:0;background:${c}"></span>${sec.id}</div>`;
-      const fr=sec.full;fr.forEach((f,fi)=>{const fy=y+13+fi*13;const ff=fi===S.field;
-        rows+=`<div style="position:absolute;left:0;right:0;top:${fy}px;height:13px;font-size:8px;display:flex;align-items:center;padding:0 8px;gap:6px;${ff?'background:var(--maroon);box-shadow:-4px 0 0 var(--rail) inset':''}">
+      let hy=y+13;
+      sec.full.forEach((f,fi)=>{const ff=fi===S.field;
+        rows+=`<div style="position:absolute;left:0;right:0;top:${hy}px;height:13px;font-size:8px;display:flex;align-items:center;padding:0 8px;gap:6px;${ff?'background:var(--maroon);box-shadow:-4px 0 0 var(--rail) inset':''}">
           <span style="flex:0 0 90px;color:${ff?'#fff':'var(--dim)'}">${f[0]}</span>
           <span style="flex:1;height:3px;background:#1d1d26;position:relative"><i style="position:absolute;left:0;top:0;bottom:0;width:${20+fi*9}%;background:${ff?'var(--rail)':'#3c3c4a'}"></i></span>
-          <span style="flex:0 0 60px;text-align:right;color:${ff?'#fff':'var(--ink)'}">${f[1]}</span></div>`;});
+          <span style="flex:0 0 60px;text-align:right;color:${ff?'#fff':'var(--ink)'}">${f[1]}</span></div>`;hy+=13;});
+      y=hy+3;
       return;
     }
+    const foc=(S.exp<0&&si===S.sec);
+    const flds=(sec.inline||sec.full).slice(0,5);
     let f='';flds.forEach((fl,fi)=>{const pill=foc&&fi===S.field;
       const lc=pill?'#04101e':(foc?c:`color-mix(in srgb, ${c} 42%, #555)`);
       f+=`<div class="f ${pill?'pill':''}" style="left:${cols[fi]}%;top:3px;color:${lc}"><span>${fl[0]}</span><span class="v" style="${foc&&!pill?'color:var(--hi)':''}">${fl[1]}</span></div>`;});
     rows+=`<div class="t-row ${foc?'foc':''}" style="top:${y}px;right:0;background:${foc?'var(--maroon)':''}">
       <span class="rail"></span><span class="nm" style="color:${foc?c:`color-mix(in srgb, ${c} 80%, #000)`}">${sec.id}</span>${f}</div>`;
+    y+=16;
   });
   // dock
   const c=rc(sc[S.sec]?sc[S.sec].id:'SOURCE');
