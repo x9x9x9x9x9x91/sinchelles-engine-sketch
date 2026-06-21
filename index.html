@@ -314,13 +314,44 @@ function pitchBig(c,w,h){let k='';const n=10,kw=(w-20)/n;for(let i=0;i<n;i++){k+
   return svg(w,h,`${k}<rect x="10" y="${h*0.25}" width="${kw-1}" height="${h*0.55}" fill="${c}" opacity=".55"/>
    <text x="${w/2}" y="${h-4}" font-size="7" fill="${c}" text-anchor="middle" font-family="monospace">SEMI 0 st · DET 0.15</text>`);}
 
+/* ---------- foldout: full param list as bars, with live modulation ---------- */
+/* A few params are shown "modulated" so the foldout demonstrates what the drill-in
+   adds over the collapsed view: every param (not just the curated ones) + the live
+   mod meter (grey base tick, yellow swing band lo..hi, yellow live head, source cue). */
+const MODDEMO={RATE:{s:'LFO1',b:.52,lo:.34,hi:.74,L:.62},CUTOFF:{s:'ENV',b:.30,lo:.30,hi:.86,L:.57},
+  'SCAN A':{s:'LFO2',b:.40,lo:.18,hi:.80,L:.5},FMOD:{s:'AUTO',b:.46,lo:.30,hi:.70,L:.54},
+  SUSTAIN:{s:'LFO1',b:.70,lo:.50,hi:.92,L:.79},PROB:{s:'RAND',b:1,lo:.6,hi:1,L:.88},
+  DETUNE:{s:'LFO2',b:.30,lo:.15,hi:.55,L:.41}};
+function foldoutBars(sec,c,x,y,w,h,focIdx){
+  const fl=sec.full,n=fl.length,bh=Math.max(13,Math.min(20,Math.floor(h/n)));
+  const labW=92,valW=58,trackX=x+labW,trackW=w-labW-valW-10;
+  let s='';
+  fl.forEach((f,fi)=>{
+    const by=y+fi*bh,ff=fi===focIdx,m=MODDEMO[f[0]],trackY=by+bh/2;
+    if(ff)s+=`<div style="position:absolute;left:${x-4}px;top:${by}px;width:${w+4}px;height:${bh-1}px;background:var(--maroon);box-shadow:-4px 0 0 var(--rail) inset"></div>`;
+    s+=`<div style="position:absolute;left:${x}px;top:${by+bh/2-4}px;font-size:8px;color:${ff?'#fff':'color-mix(in srgb,'+c+' 62%,#888)'}">${f[0]}</div>`;
+    s+=`<div style="position:absolute;left:${trackX}px;top:${trackY-1}px;width:${trackW}px;height:3px;background:#1b1b24"></div>`;
+    if(m){
+      s+=`<div style="position:absolute;left:${trackX+trackW*m.lo}px;top:${trackY-1}px;width:${trackW*(m.hi-m.lo)}px;height:3px;background:rgba(200,200,50,.32)"></div>`;
+      s+=`<div style="position:absolute;left:${trackX+trackW*m.b-1}px;top:${trackY-3}px;width:2px;height:7px;background:#8c8c98"></div>`;
+      s+=`<div style="position:absolute;left:${trackX+trackW*m.L-1}px;top:${trackY-3}px;width:3px;height:7px;background:rgb(200,200,50)"></div>`;
+      s+=`<div style="position:absolute;left:${trackX}px;top:${by+1}px;width:${trackW}px;text-align:right;font-size:6px;color:rgb(200,200,50)">${m.s}</div>`;
+      s+=`<div style="position:absolute;left:${x+w-valW}px;top:${by+bh/2-3}px;width:${valW}px;text-align:right;font-size:8px;color:${ff?'#fff':'var(--ink)'}">${f[1]}</div>`;
+    } else {
+      s+=`<div style="position:absolute;left:${trackX}px;top:${trackY-1}px;width:${trackW*(0.25+(fi%4)*0.12)}px;height:3px;background:${ff?'var(--rail)':'#3a3a48'}"></div>`;
+      s+=`<div style="position:absolute;left:${x+w-valW}px;top:${by+bh/2-4}px;width:${valW}px;text-align:right;font-size:8px;color:${ff?'#fff':'var(--ink)'}">${f[1]}</div>`;
+    }
+  });
+  return s;
+}
+
 /* ---------- state ---------- */
 const S={v:0,e:'sampler',
-  sec:0,field:0,exp:-1,          // TODAY + BREATHE (stream)
+  sec:0,field:0,exp:-1,          // TODAY + stream
   pan:0,panOpen:false,panRow:0,  // PANELS
   fsec:0,ffield:0,               // FOCUS
   chip:0,chipOpen:false,chipRow:0,// HERO
-  rcol:0,rrow:0                  // RASTER
+  rcol:0,rrow:0,boxOpen:false,colOpen:false  // RASTER / BOXES foldouts
 };
 let T=0; // animation tick
 const dev=document.getElementById('dev');
@@ -433,8 +464,19 @@ function renderFocus(){
 /* ============================================================= BOXES — larger 2-col card grid (refined) */
 function renderBreathe(){
   const sc=secs();let html=crumb();
+  if(S.boxOpen){ // FOLDOUT: the focused box opens to a big detail card (all params + mod)
+    const sec=sc[S.sec],c=rc(sec.id),isEnv=(sec.id==='ENV');
+    const fp=sec.full[Math.min(S.field,sec.full.length-1)];
+    html+=`<div class="subhdr"><span class="nm" style="color:${c}">◆ ${fp[0]}</span><span class="ds">${sec.id} open · all params + mod · ESC closes</span></div>`;
+    html+=`<div style="position:absolute;left:8px;top:31px;right:8px;bottom:26px;border:1px solid var(--rail);border-radius:3px;background:rgba(20,12,16,.9)"></div>`;
+    html+=`<div style="position:absolute;left:18px;top:38px;padding:2px 8px;border:1px solid var(--rail);border-radius:2px;font-size:9px;letter-spacing:.5px;color:${c};background:rgba(0,0,0,.3)">${sec.id}</div>`;
+    if(isEnv)html+=`<div style="position:absolute;right:18px;top:36px;width:150px;height:46px">${gEnvBig(c,150,46)}</div>`;
+    html+=foldoutBars(sec,c,24,isEnv?92:64,432,sec.full.length*17,S.field);
+    html+=miniPat()+foot('<span class="k">↑↓</span> param · <span class="k">W/S</span> edit · <span class="k">ESC/←</span> close');
+    dev.innerHTML=html;return;
+  }
   const fsec=sc[S.sec];const c0=rc(fsec.id);
-  html+=`<div class="subhdr"><span class="nm" style="color:${c0}">◆ ${fsec.id}</span><span class="ds">larger boxes</span></div>`;
+  html+=`<div class="subhdr"><span class="nm" style="color:${c0}">◆ ${fsec.id}</span><span class="ds">larger boxes — ENTER opens a box</span></div>`;
   const top=29, bottom=292, mx=6, gap=5;
   const colW=(480-2*mx-gap)/2;            // ~231 (two columns)
   const rowH=(bottom-top-2*gap)/3;         // ~84 (three rows)
@@ -466,7 +508,7 @@ function renderBreathe(){
         html+=`<div style="position:absolute;left:${lx}px;top:${lTop+fi*lh}px;width:${listW}px;display:flex;justify-content:space-between;font-size:7.5px"><span style="color:color-mix(in srgb,${c} 55%,#777)">${f[0]}</span><span style="color:var(--ink)">${f[1]}</span></div>`;});
     }
   });
-  html+=miniPat()+foot('<span class="k">↑↓←→</span> box · <span class="k">W/S</span> nudge');
+  html+=miniPat()+foot('<span class="k">↑↓←→</span> box · <span class="k">ENT</span> open · <span class="k">W/S</span> nudge');
   dev.innerHTML=html;
 }
 
@@ -499,6 +541,22 @@ function renderRaster(){
   const colW=(W-(nC-1)*gap)/nC;
   const cFoc=sc[S.rcol]||sc[0];const cc=rc(cFoc.id);
   const flF=cFoc.full;const fp=flF[Math.min(S.rrow,flF.length-1)];
+  if(S.colOpen){ // FOLDOUT: focused column expands to a detail panel (all params + mod)
+    const isEnv=(cFoc.id==='ENV');
+    let html=crumb()+`<div class="subhdr"><span class="nm" style="color:${cc}">◆ ${fp[0]}</span><span class="ds">${cFoc.id} open · all params + mod · ESC closes</span></div>`;
+    // left rail: the other channels, collapsed to labels (mixer "zoom one channel")
+    html+=`<div style="position:absolute;left:0;top:28px;width:70px;bottom:24px;background:rgba(120,150,185,.05)"></div><div style="position:absolute;left:70px;top:28px;width:1px;bottom:24px;background:#2b2b36"></div>`;
+    sc.forEach((s2,i)=>{const c2=rc(s2.id),fc=(i===S.rcol);
+      html+=`<div style="position:absolute;left:6px;top:${34+i*22}px;width:58px;padding:2px 0;text-align:center;border:1px solid ${fc?'var(--rail)':'color-mix(in srgb,'+c2+' 40%,#000)'};border-radius:2px;font-size:7px;color:${fc?c2:'color-mix(in srgb,'+c2+' 70%,#000)'};background:${fc?'rgba(40,16,22,.5)':'rgba(0,0,0,.25)'}">${s2.id.replace('PATTERN','PAT')}</div>`;});
+    // detail panel
+    html+=`<div style="position:absolute;left:76px;top:31px;right:8px;bottom:26px;border:1px solid var(--rail);border-radius:3px;background:rgba(20,12,16,.9)"></div>`;
+    html+=`<div style="position:absolute;left:76px;top:36px;right:8px;text-align:center;font-size:9px;letter-spacing:1px;color:${cc}">${cFoc.id}</div>`;
+    html+=`<div style="position:absolute;left:120px;top:49px;right:60px;height:2px;background:${cc}"></div>`;
+    if(isEnv)html+=`<div style="position:absolute;left:90px;right:18px;top:54px;height:42px">${gEnvBig(cc,360,42)}</div>`;
+    html+=foldoutBars(cFoc,cc,92,isEnv?100:58,372,cFoc.full.length*17,S.rrow);
+    html+=miniPat()+foot('<span class="k">↑↓</span> param · <span class="k">W/S</span> edit · <span class="k">ESC/←</span> close');
+    dev.innerHTML=html;return;
+  }
   let html=crumb()+`<div class="subhdr"><span class="nm" style="color:${cc}">◆ ${fp[0]}</span><span class="ds">${cFoc.id} · raster (mixer family)</span></div>`;
   sc.forEach((sec,ci)=>{
     const c=rc(sec.id),foc=(ci===S.rcol);const x=L+ci*(colW+gap);
@@ -517,7 +575,7 @@ function renderRaster(){
         <div style="height:1px;background:${ff?'rgba(4,16,30,.5)':'#1b1b23'};margin:1px 3px 0"></div></div>`;
     });
   });
-  html+=miniPat()+foot('<span class="k">←→</span> section · <span class="k">↑↓</span> param · <span class="k">W/S</span> edit');
+  html+=miniPat()+foot('<span class="k">←→</span> section · <span class="k">↑↓</span> param · <span class="k">ENT</span> open · <span class="k">W/S</span> edit');
   dev.innerHTML=html;
 }
 
@@ -546,30 +604,59 @@ function renderRowsViz(){
   dev.innerHTML=html;
 }
 
-/* ============================================================= 7 x TODAY (today density + boxed labels + env-only viz) — refined */
+/* ============================================================= 7 x TODAY (separated category column + accordion foldout) — refined */
 function renderInlineViz(){
   const sc=secs();let html=crumb();
-  const fsec=sc[S.sec];const c0=rc(fsec.id);const fl0=(fsec.inline||fsec.full);
-  html+=`<div class="subhdr"><span class="nm" style="color:${c0}">◆ ${fl0[Math.min(S.field,fl0.length-1)][0]}</span><span class="ds">${fsec.id} · compact + boxed (7 × today)</span></div>`;
-  const top=30, bottom=284, n=sc.length, bh=(bottom-top)/n;
-  const cols=[96,171,246,321,396];
+  const bodyTop=28, bodyBot=284, catW=86, px=catW+8;  // params start right of the category column
+  const cols=[catW+8, catW+82, catW+156, catW+230, catW+304];
+  // category column: its own tinted band + a hard divider, so it reads as a separate column (Tim)
+  html+=`<div style="position:absolute;left:0;top:${bodyTop}px;width:${catW}px;height:${bodyBot-bodyTop}px;background:rgba(120,150,185,.05)"></div>`;
+  html+=`<div style="position:absolute;left:${catW}px;top:${bodyTop}px;width:1px;height:${bodyBot-bodyTop}px;background:#2b2b36"></div>`;
+  const labelChip=(yy,c,foc,name)=>`<div style="position:absolute;left:8px;top:${yy}px;width:${catW-16}px;padding:2px 0;text-align:center;border:1px solid ${foc?'var(--rail)':'color-mix(in srgb,'+c+' 45%,#000)'};border-radius:2px;font-size:7.5px;letter-spacing:.4px;color:${foc?c:'color-mix(in srgb,'+c+' 82%,#000)'};background:rgba(0,0,0,.3)">${name}</div>`;
+
+  if(S.exp>=0){
+    // ---- accordion FOLDOUT: focused section -> full param bars + live mod; others thin ----
+    const xsec=sc[S.exp];const xc=rc(xsec.id);const fp=xsec.full[Math.min(S.field,xsec.full.length-1)];
+    html+=`<div class="subhdr"><span class="nm" style="color:${xc}">◆ ${fp[0]}</span><span class="ds">${xsec.id} open · all params + mod · ESC closes</span></div>`;
+    let y=bodyTop+3;
+    sc.forEach((sec,si)=>{
+      const c=rc(sec.id);
+      if(si===S.exp){
+        html+=labelChip(y+1,c,true,sec.id);
+        const bh2=Math.max(13,Math.min(18,(bodyBot-y-(sc.length-1-si)*16-2)/sec.full.length));
+        html+=foldoutBars(sec,c,px,y,480-px-8,sec.full.length*bh2,S.field);
+        y+=sec.full.length*bh2+4;
+      } else {
+        html+=labelChip(y+1,c,false,sec.id);
+        const flds=(sec.inline||sec.full);
+        flds.slice(0,5).forEach((f,fi)=>{
+          html+=`<div style="position:absolute;left:${cols[fi]}px;top:${y+1}px;font-size:7.5px;display:flex;gap:4px;white-space:nowrap"><span style="color:color-mix(in srgb,${c} 42%,#555)">${f[0]}</span><span style="color:var(--ink)">${f[1]}</span></div>`;});
+        y+=16;
+      }
+    });
+    html+=miniPat()+foot('<span class="k">↑↓</span> param · <span class="k">W/S</span> edit · <span class="k">ESC/←</span> close');
+    dev.innerHTML=html;return;
+  }
+
+  // ---- collapsed: spread rows, category column on the left, env-only viz ----
+  const fsec=sc[S.sec];const fl0=(fsec.inline||fsec.full);
+  html+=`<div class="subhdr"><span class="nm" style="color:${rc(fsec.id)}">◆ ${fl0[Math.min(S.field,fl0.length-1)][0]}</span><span class="ds">${fsec.id} · compact + boxed (7 × today)</span></div>`;
+  const n=sc.length, bh=(bodyBot-bodyTop)/n;
   sc.forEach((sec,si)=>{
-    const c=rc(sec.id),foc=(si===S.sec);const y=top+si*bh;const flds=(sec.inline||sec.full);
-    const isEnv=(sec.id==='ENV');const ftop=y+5;
-    // separation: a subtle band + a boxed label (Tom drew boxes around the labels)
-    if(foc){
-      html+=`<div style="position:absolute;left:0;right:0;top:${y}px;height:${bh-2}px;background:linear-gradient(90deg,rgba(40,16,22,.7),rgba(18,9,12,0) 80%)"></div>`;
-      html+=`<div style="position:absolute;left:2px;top:${y+2}px;width:4px;height:${bh-6}px;background:var(--rail)"></div>`;}
-    html+=`<div style="position:absolute;left:9px;top:${ftop-1}px;padding:1px 5px;border:1px solid ${foc?'var(--rail)':'color-mix(in srgb,'+c+' 45%,#000)'};border-radius:2px;font-size:8px;letter-spacing:.5px;color:${foc?c:'color-mix(in srgb,'+c+' 82%,#000)'};background:rgba(0,0,0,.25)">${sec.id}</div>`;
+    const c=rc(sec.id),foc=(si===S.sec);const y=bodyTop+si*bh;const flds=(sec.inline||sec.full);
+    const isEnv=(sec.id==='ENV');const ftop=y+6;
+    // focused band highlight in the PARAM area only (category column stays clean)
+    if(foc)html+=`<div style="position:absolute;left:${catW+1}px;right:0;top:${y}px;height:${bh-2}px;background:linear-gradient(90deg,rgba(40,16,22,.7),rgba(18,9,12,0) 85%)"></div>`;
+    // category column label box (centred in the column)
+    html+=labelChip(y+bh/2-8,c,foc,sec.id);
     flds.slice(0,5).forEach((f,fi)=>{const pill=foc&&fi===S.field;
-      html+=`<div style="position:absolute;left:${cols[fi]/480*100}%;top:${ftop}px;font-size:8px;display:flex;gap:5px;white-space:nowrap;${pill?'background:var(--pill);padding:0 3px;border-radius:1px':''}">
+      html+=`<div style="position:absolute;left:${cols[fi]}px;top:${ftop}px;font-size:8px;display:flex;gap:5px;white-space:nowrap;${pill?'background:var(--pill);padding:0 3px;border-radius:1px':''}">
         <span style="color:${pill?'#04101e':(foc?c:'color-mix(in srgb,'+c+' 45%,#555)')}">${f[0]}</span>
         <span style="color:${pill?'#04101e':(foc?'var(--hi)':'var(--ink)')}">${f[1]}</span></div>`;});
-    // the one visualizer worth keeping: env curve, inline under the ENV row's params
-    if(isEnv)html+=`<div style="position:absolute;left:90px;right:14px;top:${y+19}px;height:${bh-25}px">${gEnvBig(c,376,bh-25)}</div>`;
-    if(si<n-1)html+=`<div style="position:absolute;left:6px;right:6px;top:${y+bh-1}px;height:1px;background:#181820"></div>`;
+    if(isEnv)html+=`<div style="position:absolute;left:${px}px;right:14px;top:${y+20}px;height:${bh-26}px">${gEnvBig(c,376,bh-26)}</div>`;
+    if(si<n-1)html+=`<div style="position:absolute;left:${catW}px;right:6px;top:${y+bh-1}px;height:1px;background:#181820"></div>`;
   });
-  html+=miniPat()+foot('<span class="k">↑↓</span> section · <span class="k">↔</span> field · <span class="k">W/S</span> edit');
+  html+=miniPat()+foot('<span class="k">↑↓</span> section · <span class="k">↔</span> field · <span class="k">ENT</span> open · <span class="k">W/S</span> edit');
   dev.innerHTML=html;
 }
 
@@ -628,15 +715,23 @@ function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
 
 function nav(k){
   const sc=secs();const n=sc.length;
-  if(S.v===3){ // BOXES grid: 0 1 / 2 3 / 4(full), card-level
+  if(S.v===3){ // BOXES grid: 0 1 / 2 3 / 4(full)
+    if(S.boxOpen){ // foldout: full params + mod
+      const fr=sc[S.sec].full;
+      if(k==='up')S.field=clamp(S.field-1,0,fr.length-1);
+      if(k==='down')S.field=clamp(S.field+1,0,fr.length-1);
+      if(k==='enter'||k==='esc'||k==='left'){S.boxOpen=false;}
+      return;
+    }
     if(k==='left')S.sec=clamp(S.sec-1,0,n-1);
     if(k==='right')S.sec=clamp(S.sec+1,0,n-1);
     if(k==='up')S.sec=clamp(S.sec-2,0,n-1);
     if(k==='down')S.sec=clamp(S.sec+2,0,n-1);
+    if(k==='enter'){S.boxOpen=true;S.field=0;}
     return;
   }
   if(S.v===0||S.v===6||S.v===7){ // stream nav (today / row-viz / 7×today)
-    if(S.v===0&&S.exp>=0){ // expanded accordion (TODAY only)
+    if((S.v===0||S.v===7)&&S.exp>=0){ // expanded accordion foldout (TODAY + 7×today)
       const fr=sc[S.exp].full;
       if(k==='up')S.field=clamp(S.field-1,0,fr.length-1);
       if(k==='down')S.field=clamp(S.field+1,0,fr.length-1);
@@ -650,7 +745,7 @@ function nav(k){
     if(k==='left')S.field=clamp(S.field-1,0,maxF-1);
     if(k==='right')S.field=clamp(S.field+1,0,maxF-1);
     S.field=clamp(S.field,0,maxF-1);
-    if(k==='enter'&&S.v===0){S.exp=S.sec;S.field=0;} // only TODAY expands
+    if(k==='enter'&&(S.v===0||S.v===7)){S.exp=S.sec;S.field=0;} // TODAY + 7×today expand
   } else if(S.v===1){ // panels grid (3 cols, sc.length+1 cells)
     if(S.panOpen){
       const fr=sc[S.pan].full;
@@ -683,12 +778,20 @@ function nav(k){
     if(k==='right')S.chip=clamp(S.chip+1,0,n-1);
     if(k==='enter'){S.chipOpen=true;S.chipRow=0;}
   } else if(S.v===5){ // raster columns (full value matrix)
+    if(S.colOpen){ // foldout: column expands to full detail + mod
+      const fr=sc[S.rcol].full;
+      if(k==='up')S.rrow=clamp(S.rrow-1,0,fr.length-1);
+      if(k==='down')S.rrow=clamp(S.rrow+1,0,fr.length-1);
+      if(k==='enter'||k==='esc'||k==='left'){S.colOpen=false;}
+      return;
+    }
     if(k==='left')S.rcol=clamp(S.rcol-1,0,n-1);
     if(k==='right')S.rcol=clamp(S.rcol+1,0,n-1);
     const fl=sc[S.rcol].full;
     if(k==='up')S.rrow=clamp(S.rrow-1,0,fl.length-1);
     if(k==='down')S.rrow=clamp(S.rrow+1,0,fl.length-1);
     S.rrow=clamp(S.rrow,0,fl.length-1);
+    if(k==='enter'){S.colOpen=true;S.rrow=0;}
   }
 }
 
@@ -712,7 +815,7 @@ document.querySelectorAll('button.eng').forEach(b=>b.onclick=()=>{S.e=b.dataset.
   if(q.has('e')&&ENGINES[q.get('e')])S.e=q.get('e');
   if(q.has('sec')){const n=+q.get('sec');S.sec=S.pan=S.fsec=S.chip=S.rcol=n;}
   if(q.has('field')){const n=+q.get('field');S.field=S.ffield=S.panRow=S.chipRow=S.rrow=n;}
-  if(q.get('open')==='1'){S.exp=S.sec;S.panOpen=true;S.chipOpen=true;}
+  if(q.get('open')==='1'){S.exp=S.sec;S.panOpen=true;S.chipOpen=true;S.boxOpen=true;S.colOpen=true;}
 })();
 
 /* fit device to window so it never clips, crisp ×2 when there's room */
