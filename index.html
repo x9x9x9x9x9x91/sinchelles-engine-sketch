@@ -604,58 +604,64 @@ function renderRowsViz(){
   dev.innerHTML=html;
 }
 
-/* ============================================================= 7 x TODAY (separated category column + accordion foldout) — refined */
+/* ============================================================= 7 x TODAY (clean two-pane: category column | params, env anchor) — refined */
 function renderInlineViz(){
   const sc=secs();let html=crumb();
-  const bodyTop=28, bodyBot=284, catW=86, px=catW+8;  // params start right of the category column
+  const bodyTop=28, bodyBot=284, catW=78, px=catW+8;
   const cols=[catW+8, catW+82, catW+156, catW+230, catW+304];
-  // category column: its own tinted band + a hard divider, so it reads as a separate column (Tim)
-  html+=`<div style="position:absolute;left:0;top:${bodyTop}px;width:${catW}px;height:${bodyBot-bodyTop}px;background:rgba(120,150,185,.05)"></div>`;
-  html+=`<div style="position:absolute;left:${catW}px;top:${bodyTop}px;width:1px;height:${bodyBot-bodyTop}px;background:#2b2b36"></div>`;
-  const labelChip=(yy,c,foc,name)=>`<div style="position:absolute;left:8px;top:${yy}px;width:${catW-16}px;padding:2px 0;text-align:center;border:1px solid ${foc?'var(--rail)':'color-mix(in srgb,'+c+' 45%,#000)'};border-radius:2px;font-size:7.5px;letter-spacing:.4px;color:${foc?c:'color-mix(in srgb,'+c+' 82%,#000)'};background:rgba(0,0,0,.3)">${name}</div>`;
+  // a tidy table column: per-section CELL (subtle fill + hairline + role tick + TOP-aligned
+  // name, no floating chip). Focused cell gets a clean role tint + bright name/tick.
+  const catCell=(y,h,c,foc,name)=>
+    `<div style="position:absolute;left:0;top:${y}px;width:${catW}px;height:${h}px;background:${foc?'rgba(214,84,96,.16)':'rgba(255,255,255,.022)'};border-bottom:1px solid rgba(255,255,255,.05)"></div>`
+   +`<div style="position:absolute;left:0;top:${y}px;width:3px;height:${h}px;background:${foc?'var(--rail)':'color-mix(in srgb,'+c+' 55%,#000)'}"></div>`
+   +`<div style="position:absolute;left:9px;top:${y+5}px;font-size:8px;letter-spacing:.4px;color:${foc?c:'color-mix(in srgb,'+c+' 80%,#000)'}">${name}</div>`;
+  const catDiv=(y,h)=>`<div style="position:absolute;left:${catW}px;top:${y}px;width:1px;height:${h}px;background:#2a2a34"></div>`;
 
   if(S.exp>=0){
     // ---- accordion FOLDOUT: focused section -> full param bars + live mod; others thin ----
     const xsec=sc[S.exp];const xc=rc(xsec.id);const fp=xsec.full[Math.min(S.field,xsec.full.length-1)];
     html+=`<div class="subhdr"><span class="nm" style="color:${xc}">◆ ${fp[0]}</span><span class="ds">${xsec.id} open · all params + mod · ESC closes</span></div>`;
-    let y=bodyTop+3;
+    html+=catDiv(bodyTop,bodyBot-bodyTop);
+    let y=bodyTop+2;
     sc.forEach((sec,si)=>{
       const c=rc(sec.id);
       if(si===S.exp){
-        html+=labelChip(y+1,c,true,sec.id);
-        const bh2=Math.max(13,Math.min(18,(bodyBot-y-(sc.length-1-si)*16-2)/sec.full.length));
-        html+=foldoutBars(sec,c,px,y,480-px-8,sec.full.length*bh2,S.field);
-        y+=sec.full.length*bh2+4;
+        const bh2=Math.max(13,Math.min(18,(bodyBot-y-(sc.length-1-si)*18-2)/sec.full.length));
+        const blockH=sec.full.length*bh2;
+        html+=catCell(y,blockH,c,true,sec.id);
+        html+=foldoutBars(sec,c,px,y,480-px-8,blockH,S.field);
+        y+=blockH+2;
       } else {
-        html+=labelChip(y+1,c,false,sec.id);
-        const flds=(sec.inline||sec.full);
-        flds.slice(0,5).forEach((f,fi)=>{
-          html+=`<div style="position:absolute;left:${cols[fi]}px;top:${y+1}px;font-size:7.5px;display:flex;gap:4px;white-space:nowrap"><span style="color:color-mix(in srgb,${c} 42%,#555)">${f[0]}</span><span style="color:var(--ink)">${f[1]}</span></div>`;});
-        y+=16;
+        html+=catCell(y,18,c,false,sec.id);
+        (sec.inline||sec.full).slice(0,5).forEach((f,fi)=>{
+          html+=`<div style="position:absolute;left:${cols[fi]}px;top:${y+5}px;font-size:7.5px;display:flex;gap:4px;white-space:nowrap"><span style="color:color-mix(in srgb,${c} 42%,#555)">${f[0]}</span><span style="color:var(--ink)">${f[1]}</span></div>`;});
+        y+=18;
       }
     });
     html+=miniPat()+foot('<span class="k">↑↓</span> param · <span class="k">W/S</span> edit · <span class="k">ESC/←</span> close');
     dev.innerHTML=html;return;
   }
 
-  // ---- collapsed: spread rows, category column on the left, env-only viz ----
+  // ---- collapsed: compact aligned rows (category column | params) + env anchor below ----
   const fsec=sc[S.sec];const fl0=(fsec.inline||fsec.full);
-  html+=`<div class="subhdr"><span class="nm" style="color:${rc(fsec.id)}">◆ ${fl0[Math.min(S.field,fl0.length-1)][0]}</span><span class="ds">${fsec.id} · compact + boxed (7 × today)</span></div>`;
-  const n=sc.length, bh=(bodyBot-bodyTop)/n;
+  html+=`<div class="subhdr"><span class="nm" style="color:${rc(fsec.id)}">◆ ${fl0[Math.min(S.field,fl0.length-1)][0]}</span><span class="ds">${fsec.id} · category column + params</span></div>`;
+  const n=sc.length, rowH=22, rowsTop=bodyTop+2, rowsBot=rowsTop+n*rowH;
+  html+=catDiv(rowsTop,n*rowH);
   sc.forEach((sec,si)=>{
-    const c=rc(sec.id),foc=(si===S.sec);const y=bodyTop+si*bh;const flds=(sec.inline||sec.full);
-    const isEnv=(sec.id==='ENV');const ftop=y+6;
-    // focused band highlight in the PARAM area only (category column stays clean)
-    if(foc)html+=`<div style="position:absolute;left:${catW+1}px;right:0;top:${y}px;height:${bh-2}px;background:linear-gradient(90deg,rgba(40,16,22,.7),rgba(18,9,12,0) 85%)"></div>`;
-    // category column label box (centred in the column)
-    html+=labelChip(y+bh/2-8,c,foc,sec.id);
+    const c=rc(sec.id),foc=(si===S.sec);const y=rowsTop+si*rowH;const flds=(sec.inline||sec.full);
+    if(foc)html+=`<div style="position:absolute;left:${catW+1}px;right:0;top:${y}px;height:${rowH}px;background:rgba(214,84,96,.12)"></div>`;
+    html+=`<div style="position:absolute;left:${catW+1}px;right:0;top:${y+rowH-1}px;height:1px;background:rgba(255,255,255,.045)"></div>`;
+    html+=catCell(y,rowH,c,foc,sec.id);
     flds.slice(0,5).forEach((f,fi)=>{const pill=foc&&fi===S.field;
-      html+=`<div style="position:absolute;left:${cols[fi]}px;top:${ftop}px;font-size:8px;display:flex;gap:5px;white-space:nowrap;${pill?'background:var(--pill);padding:0 3px;border-radius:1px':''}">
-        <span style="color:${pill?'#04101e':(foc?c:'color-mix(in srgb,'+c+' 45%,#555)')}">${f[0]}</span>
+      html+=`<div style="position:absolute;left:${cols[fi]}px;top:${y+7}px;font-size:8px;display:flex;gap:5px;white-space:nowrap;${pill?'background:var(--pill);padding:0 3px;border-radius:1px':''}">
+        <span style="color:${pill?'#04101e':(foc?c:'color-mix(in srgb,'+c+' 48%,#666)')}">${f[0]}</span>
         <span style="color:${pill?'#04101e':(foc?'var(--hi)':'var(--ink)')}">${f[1]}</span></div>`;});
-    if(isEnv)html+=`<div style="position:absolute;left:${px}px;right:14px;top:${y+20}px;height:${bh-26}px">${gEnvBig(c,376,bh-26)}</div>`;
-    if(si<n-1)html+=`<div style="position:absolute;left:${catW}px;right:6px;top:${y+bh-1}px;height:1px;background:#181820"></div>`;
   });
+  // env anchor: the one kept visualizer, a full-width AMP ENV filling the space below
+  const envTop=rowsBot+10;
+  html+=`<div style="position:absolute;left:0;right:0;top:${rowsBot+3}px;height:1px;background:#23232c"></div>`;
+  html+=`<div style="position:absolute;left:10px;top:${envTop}px;font-size:8px;letter-spacing:1px;color:var(--ENV)">AMP ENV</div>`;
+  html+=`<div style="position:absolute;left:10px;right:10px;top:${envTop+12}px;height:${bodyBot-(envTop+12)-2}px">${gEnvBig(rc('ENV'),460,bodyBot-(envTop+12)-2)}</div>`;
   html+=miniPat()+foot('<span class="k">↑↓</span> section · <span class="k">↔</span> field · <span class="k">ENT</span> open · <span class="k">W/S</span> edit');
   dev.innerHTML=html;
 }
