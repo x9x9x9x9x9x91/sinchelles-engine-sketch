@@ -430,31 +430,43 @@ function renderFocus(){
     +foot('<span class="k">↑↓</span> param/section · <span class="k">W/S</span> edit · <span class="k">→</span> jump section');
 }
 
-/* ============================================================= BREATHE -> BOXES (separated cards) — refined */
+/* ============================================================= BOXES — larger 2-col card grid (refined) */
 function renderBreathe(){
   const sc=secs();let html=crumb();
-  const fsec=sc[S.sec];const c0=rc(fsec.id);const fl0=(fsec.inline||fsec.full);
-  html+=`<div class="subhdr"><span class="nm" style="color:${c0}">◆ ${fl0[Math.min(S.field,fl0.length-1)][0]}</span><span class="ds">${fsec.id} · separated boxes</span></div>`;
-  const top=29, bottom=284, n=sc.length, gap=5, bh=(bottom-top)/n;
-  const cols=[96,171,246,321,396];  // param columns (after the label chip)
+  const fsec=sc[S.sec];const c0=rc(fsec.id);
+  html+=`<div class="subhdr"><span class="nm" style="color:${c0}">◆ ${fsec.id}</span><span class="ds">larger boxes</span></div>`;
+  const top=29, bottom=292, mx=6, gap=5;
+  const colW=(480-2*mx-gap)/2;            // ~231 (two columns)
+  const rowH=(bottom-top-2*gap)/3;         // ~84 (three rows)
+  const pos=[
+    {x:mx, y:top, w:colW},
+    {x:mx+colW+gap, y:top, w:colW},
+    {x:mx, y:top+rowH+gap, w:colW},
+    {x:mx+colW+gap, y:top+rowH+gap, w:colW},
+    {x:mx, y:top+2*(rowH+gap), w:480-2*mx}   // PATTERN spans both columns
+  ];
   sc.forEach((sec,si)=>{
-    const c=rc(sec.id),foc=(si===S.sec);const y=top+si*bh;const ch=bh-gap;
-    const flds=(sec.inline||sec.full);const isEnv=(sec.id==='ENV');
-    const cy=y+ch/2-4;
-    // bordered card + role-coloured left edge (Tom: "boxen, was das abtrennt")
-    html+=`<div style="position:absolute;left:6px;right:6px;top:${y}px;height:${ch}px;border:1px solid ${foc?'var(--rail)':'#22222c'};border-radius:3px;background:${foc?'rgba(38,15,21,.5)':'rgba(15,15,21,.7)'}"></div>`;
-    html+=`<div style="position:absolute;left:6px;top:${y}px;width:3px;height:${ch}px;background:${foc?'var(--rail)':c};border-radius:3px 0 0 3px"></div>`;
-    // boxed section label chip
-    html+=`<div style="position:absolute;left:14px;top:${cy-2}px;padding:2px 6px;border:1px solid ${foc?'var(--rail)':'color-mix(in srgb,'+c+' 50%,#000)'};border-radius:2px;font-size:8px;letter-spacing:.5px;color:${foc?c:'color-mix(in srgb,'+c+' 85%,#000)'};background:rgba(0,0,0,.25)">${sec.id}</div>`;
-    const nf=isEnv?3:5;
-    flds.slice(0,nf).forEach((f,fi)=>{const pill=foc&&fi===S.field;
-      html+=`<div style="position:absolute;left:${cols[fi]/480*100}%;top:${cy}px;font-size:8px;display:flex;gap:5px;white-space:nowrap;${pill?'background:var(--pill);padding:0 3px;border-radius:1px':''}">
-        <span style="color:${pill?'#04101e':(foc?c:'color-mix(in srgb,'+c+' 50%,#666)')}">${f[0]}</span>
-        <span style="color:${pill?'#04101e':(foc?'var(--hi)':'var(--ink)')}">${f[1]}</span></div>`;});
-    // the one kept visualizer: the envelope curve, inside the ENV card
-    if(isEnv)html+=`<div style="position:absolute;right:14px;top:${y+5}px;width:150px;height:${ch-10}px">${gEnvBig(c,150,ch-10)}</div>`;
+    const p=pos[Math.min(si,pos.length-1)];
+    const c=rc(sec.id),foc=(si===S.sec);
+    const flds=(sec.inline||sec.full);const isEnv=(sec.id==='ENV');const isPat=(sec.id==='PATTERN');
+    html+=`<div style="position:absolute;left:${p.x}px;top:${p.y}px;width:${p.w}px;height:${rowH}px;border:1px solid ${foc?'var(--rail)':'#23232d'};border-radius:3px;background:${foc?'rgba(38,15,21,.5)':'rgba(14,14,20,.72)'}"></div>`;
+    html+=`<div style="position:absolute;left:${p.x}px;top:${p.y}px;width:3px;height:${rowH}px;background:${foc?'var(--rail)':c};border-radius:3px 0 0 3px"></div>`;
+    html+=`<div style="position:absolute;left:${p.x+9}px;top:${p.y+6}px;padding:1px 6px;border:1px solid ${foc?'var(--rail)':'color-mix(in srgb,'+c+' 50%,#000)'};border-radius:2px;font-size:8px;letter-spacing:.5px;color:${foc?c:'color-mix(in srgb,'+c+' 85%,#000)'};background:rgba(0,0,0,.25)">${sec.id}</div>`;
+    if(isEnv){ // the one kept visualizer
+      html+=`<div style="position:absolute;left:${p.x+p.w-104}px;top:${p.y+6}px;width:96px;height:${rowH-14}px">${gEnvBig(c,96,rowH-14)}</div>`;
+    }
+    if(isPat){ // full-width: params spread horizontally
+      const px=p.x+12, py=p.y+rowH/2-3, avail=p.w-24, step=avail/flds.length;
+      flds.forEach((f,fi)=>{
+        html+=`<div style="position:absolute;left:${px+fi*step}px;top:${py}px;font-size:8px;display:flex;gap:5px;white-space:nowrap"><span style="color:color-mix(in srgb,${c} 60%,#777)">${f[0]}</span><span style="color:var(--ink)">${f[1]}</span></div>`;});
+    } else { // vertical param list (old-card style)
+      const lx=p.x+12, lTop=p.y+24, listW=(isEnv?p.w-116:p.w-22);
+      const lh=Math.min(12,(rowH-30)/Math.max(1,flds.length));
+      flds.forEach((f,fi)=>{
+        html+=`<div style="position:absolute;left:${lx}px;top:${lTop+fi*lh}px;width:${listW}px;display:flex;justify-content:space-between;font-size:7.5px"><span style="color:color-mix(in srgb,${c} 55%,#777)">${f[0]}</span><span style="color:var(--ink)">${f[1]}</span></div>`;});
+    }
   });
-  html+=miniPat()+foot('<span class="k">↑↓</span> section · <span class="k">↔</span> field · <span class="k">W/S</span> edit');
+  html+=miniPat()+foot('<span class="k">↑↓←→</span> box · <span class="k">W/S</span> nudge');
   dev.innerHTML=html;
 }
 
@@ -616,7 +628,14 @@ function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
 
 function nav(k){
   const sc=secs();const n=sc.length;
-  if(S.v===0||S.v===3||S.v===6||S.v===7){ // stream nav (today / breathe / row-viz / 4+viz)
+  if(S.v===3){ // BOXES grid: 0 1 / 2 3 / 4(full), card-level
+    if(k==='left')S.sec=clamp(S.sec-1,0,n-1);
+    if(k==='right')S.sec=clamp(S.sec+1,0,n-1);
+    if(k==='up')S.sec=clamp(S.sec-2,0,n-1);
+    if(k==='down')S.sec=clamp(S.sec+2,0,n-1);
+    return;
+  }
+  if(S.v===0||S.v===6||S.v===7){ // stream nav (today / row-viz / 7×today)
     if(S.v===0&&S.exp>=0){ // expanded accordion (TODAY only)
       const fr=sc[S.exp].full;
       if(k==='up')S.field=clamp(S.field-1,0,fr.length-1);
