@@ -610,7 +610,7 @@ document.querySelectorAll('button.eng').forEach(b=>b.onclick=()=>{S.e=b.dataset.
 
 /* URL state: ?v=0..4 layout, ?e=sampler|miplaits|wave|drum, ?open=1 (drill open), ?sec=, ?field= */
 (function(){const q=new URLSearchParams(location.search);
-  if(q.has('v'))S.v=clamp(+q.get('v'),0,4);
+  if(q.has('v'))S.v=clamp(+q.get('v'),0,5);
   if(q.has('e')&&ENGINES[q.get('e')])S.e=q.get('e');
   if(q.has('sec')){const n=+q.get('sec');S.sec=S.pan=S.fsec=S.chip=n;}
   if(q.has('field')){const n=+q.get('field');S.field=S.ffield=S.panRow=S.chipRow=n;}
