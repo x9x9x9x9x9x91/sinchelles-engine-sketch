@@ -83,7 +83,7 @@ const EN={
    {nm:'OSC B',f:[['OSC B','Sine'],['SCAN','0.25']]},
    {nm:'BLEND',f:[['MORPH','0.45'],['RING','0.30'],['B.SEMI','+12'],['CENT','+30'],['SYNC','0.75']]},
    {nm:'FILTER',f:[['CUT','0.65'],['RES','0.40'],['MODE','LP'],['FOLD','0.20'],['DRIVE','0.55']]},
-   {nm:'F.ENV',f:[['AMT','0.80'],['ATK','0.05'],['DEC','0.35'],['SUS','0.50'],['REL','0.40']]}],
+   {nm:'F.ENV',f:[['F.AMT','0.80'],['F.ATK','0.05'],['F.DEC','0.35'],['F.SUS','0.50'],['F.REL','0.40']]}],
    voice:[['SEMI','0 st'],['VOICES','3'],['DETUNE','0.15'],['UNISON','0.42'],['WIDTH','0.60']],
    env:[['ATK','10 ms'],['SUS','0.75'],['FALL','450 ms'],['CURVE','-1.5'],['EMPH','0%']],
    mix:[['LEVEL','0.80'],['MIX','0.50'],['SUB','0.25'],['SUBOCT','-1'],['VOL','0 dB']],
@@ -103,8 +103,8 @@ const EN={
    mix:[['DJF','0.00'],['COMP','0%'],['VOL','80%'],['PAN','C'],['DUCK','0%']],
    pat:[['LEN','2.00'],['STEPS','16'],['RES','1/16'],['PROB','100%'],['HUM','0%']]},
  ditto:{name:'DITTO',rich:true,dual:true,src:[
-   {nm:'VOICE A',col:COL.SHARED,f:[['SHP','SIN'],['TON','0.45'],['GRN','0.50'],['ZAP','0.30'],['DEC','0.35']]},
-   {nm:'VOICE B',col:COL.SHARED,f:[['SHP','TRI'],['TON','0.55'],['GRN','0.48'],['ZAP','0.25'],['DEC','0.40']]},
+   {nm:'VOICE A',col:COL.SHARED,f:[['SHP.A','SIN'],['TON.A','0.45'],['GRN.A','0.50'],['ZAP.A','0.30'],['DEC.A','0.35']]},
+   {nm:'VOICE B',col:COL.SHARED,f:[['SHP.B','TRI'],['TON.B','0.55'],['GRN.B','0.48'],['ZAP.B','0.25'],['DEC.B','0.40']]},
    {nm:'SHARED',col:COL.SHARED,f:[['B.SEMI','+12'],['LINK','OFF'],['XFM','0.00'],['SEMI','0 st'],['GLIDE','OFF']]}],
    env:[['ATK','5 ms'],['SUS','0.50'],['FALL','200 ms'],['CURVE','0.0'],['MORPH','0.00']],
    mix:[['VOL','0 dB'],['PAN','C'],['COMP','0%'],['MIX','0%'],['DUCK','OFF']],
@@ -119,7 +119,7 @@ const SRCM={
  wave:[{nm:'BRIGHT',tg:{CUT:0.7,MORPH:0.4,SCAN:0.3}},{nm:'MOVE',tg:{RING:0.5,SYNC:0.5,FOLD:0.4}},{nm:'BODY',tg:{SUB:0.6,DRIVE:0.5,RES:0.3}}],
  bd:[{nm:'PUNCH',tg:{PAMT:0.7,PDEC:-0.4}},{nm:'TONE',tg:{TONE:0.6,SHAPE:0.5}},{nm:'BODY',tg:{DECAY:0.6,DRIVE:0.5}}],
  grow:[{nm:'BRIGHT',tg:{BRGHT:0.7,FOLD:0.4}},{nm:'MOVE',tg:{FM:0.6,FAN:0.5}},{nm:'BODY',tg:{SHAPE:0.5,DRIVE:0.5}}],
- ditto:[{nm:'A SHAPE',tg:{TON:0.6,ZAP:0.4,GRN:0.3}},{nm:'B SHAPE',tg:{TON:0.5,DEC:0.4}},{nm:'CROSS',tg:{XFM:0.7,'B.SEMI':0.4}}],
+ ditto:[{nm:'A SHAPE',tg:{'TON.A':0.6,'ZAP.A':0.4,'GRN.A':0.3}},{nm:'B SHAPE',tg:{'TON.B':0.5,'DEC.B':0.4}},{nm:'CROSS',tg:{XFM:0.7,'B.SEMI':0.4}}],
 };
 const TAILM={
  VOICE:[{nm:'TONE',tg:{SEMI:0.5,GLIDE:0.4}},{nm:'BODY',tg:{GAIN:0.5,WIDTH:0.5}}],
@@ -224,28 +224,39 @@ function render(){
 function colX(i){return FX0+i*COLW;}
 function footer(body){
   const f=el('foot');
-  f.innerHTML = macroOpen>=0 ? 'W/S edit param · &#8597; pick · ESC back'
-    : open>=0 ? 'W/S edit · &#8597; param · ESC back'
+  f.innerHTML = macroOpen>=0 ? 'W/S edit param · &#8597; pick · ENT/ESC close'
+    : open>=0 ? '&#8597; param · ENT/ESC close'
     : tab==='macro' ? '<b style="color:#9fb6e8">W/S shape macro</b> · &#8596; pick · ENT → all params · CT&#8597; jump'
     : '&#8596; field · &#8597; row · <b style="color:#9fb6e8">Ctrl+arrows = jump category</b> · ENT open';
   body.appendChild(f);
 }
+// a sub-category divider + tinted name inside a foldout (Tim: distinguish groups)
+function groupHeader(body,y,nm,col){
+  body.appendChild(el('','position:absolute;left:6px;width:468px;top:'+(y+4)+'px;height:1px;background:#2d2d3b'));
+  body.appendChild(tag('','position:absolute;left:6px;top:'+y+'px;font-size:7px;letter-spacing:.6px;color:'+col+';opacity:.95',nm));
+}
+// groups of a section for the foldout: SOURCE -> its engine groups; tail -> one group
+function foldGroups(s){
+  if(s.src) return EN[eng].src.map(g=>({nm:g.nm||'',col:g.col||COL.SRC,f:g.f}));
+  return [{nm:'',col:s.col,f:s.rows.flat()}];
+}
 function renderFold(body,secs){
   const s=secs[open];
-  const all=[]; if(s.src){secs.filter(x=>x.src).forEach(x=>x.rows[0].forEach(f=>all.push(f)));}
-  else s.rows.forEach(r=>r.forEach(f=>all.push(f)));
-  const title=s.src?'SOURCE — all params (every group)':(s.key+' — all params');
   const fh=el('','position:absolute;left:0;top:0;width:480px;height:13px;display:flex;align-items:center;padding:0 6px;font-size:8px;color:'+s.col+';background:#1a1016');
-  fh.textContent=title;body.appendChild(fh);
-  let y=16;
-  all.slice(0,19).forEach((f,i)=>{
-    const focused=i===Math.min(fld,all.length-1);
-    if(focused)body.appendChild(el('','position:absolute;left:0;top:'+y+'px;width:480px;height:13px;background:rgba(214,84,96,.16)'));
-    body.appendChild(tag('','position:absolute;left:8px;top:'+(y+3)+'px;font-size:8px;color:'+s.col+';opacity:.9',f[0]));
-    body.appendChild(el('','position:absolute;left:120px;top:'+(y+5)+'px;width:300px;height:5px;background:#1b1b24;border-radius:2px'));
-    body.appendChild(el('','position:absolute;left:120px;top:'+(y+5)+'px;width:'+(28+(i*41%150))+'px;height:5px;background:#3a6ea0;border-radius:2px'));
-    body.appendChild(tag('','position:absolute;right:8px;top:'+(y+3)+'px;font-size:8px;color:#cfcfda',f[1]));
-    y+=14;
+  fh.textContent=(s.src?'SOURCE':s.key)+' — all params';body.appendChild(fh);
+  const groups=foldGroups(s); const total=groups.reduce((n,g)=>n+g.f.length,0);
+  let y=16, idx=0;
+  groups.forEach(g=>{
+    if(g.nm){groupHeader(body,y,g.nm,g.col);y+=10;}
+    g.f.forEach(f=>{
+      const focused=idx===Math.min(fld,total-1);
+      if(focused)body.appendChild(el('','position:absolute;left:0;top:'+y+'px;width:480px;height:11px;background:rgba(214,84,96,.16)'));
+      body.appendChild(tag('','position:absolute;left:10px;top:'+(y+2)+'px;font-size:8px;color:'+g.col+';opacity:.92',f[0]));
+      body.appendChild(el('','position:absolute;left:150px;top:'+(y+4)+'px;width:230px;height:4px;background:#1b1b24;border-radius:2px'));
+      body.appendChild(el('','position:absolute;left:150px;top:'+(y+4)+'px;width:'+Math.min(230,30+(idx*53%190))+'px;height:4px;background:#3a6ea0;border-radius:2px'));
+      body.appendChild(tag('','position:absolute;right:8px;top:'+(y+2)+'px;font-size:8px;color:#cfcfda',f[1]));
+      idx++; y+=11;
+    });
   });
 }
 function tag(c,css,txt){const d=el(c,css);d.textContent=txt;return d;}
@@ -253,27 +264,29 @@ function pbase(i){return 20+((i*43)%62);}  // deterministic base fill % per para
 function paramOffset(s,label){let o=0;s.macros.forEach((m,i)=>{const w=m.tg[label];if(w)o+=macroVal(eng,s.key,i)*w;});return o;}
 function renderMacroFold(body,s){
   const fh=el('','position:absolute;left:0;top:0;width:480px;height:13px;display:flex;align-items:center;padding:0 6px;font-size:8px;color:'+s.col+';background:#1a1016');
-  fh.textContent=(s.key||'SOURCE')+' — all params  ·  macros: '+s.macros.map((m,i)=>m.nm+' '+macroDisp(eng,s.key,i)).join('  ');
+  fh.textContent='SOURCE — all params  ·  macros: '+s.macros.map((m,i)=>m.nm+' '+macroDisp(eng,'SOURCE',i)).join('  ');
   body.appendChild(fh);
-  let y=16; const TX=140, TW=250;
-  s.params.slice(0,20).forEach((f,i)=>{
-    const off=paramOffset(s,f[0]) + (baseOff[eng+'|'+s.key+'|'+i]||0)*0; // (per-param tweak below)
-    const tweak=baseOff[eng+'|'+s.key+'|'+i]||0;
-    const base=pbase(i), shown=Math.max(2,Math.min(100, base+tweak));
-    const macroPart=Math.max(-base,Math.min(100-shown, off)); // visible macro delta
-    const focused=i===Math.min(pfld,s.params.length-1);
-    if(focused)body.appendChild(el('','position:absolute;left:0;top:'+y+'px;width:480px;height:13px;background:rgba(214,84,96,.16)'));
-    body.appendChild(tag('','position:absolute;left:10px;top:'+(y+3)+'px;font-size:8px;color:'+s.col+';opacity:.92',f[0]));
-    body.appendChild(el('','position:absolute;left:'+TX+'px;top:'+(y+5)+'px;width:'+TW+'px;height:5px;background:#1b1b24;border-radius:2px'));
-    const bw=shown/100*TW;
-    body.appendChild(el('','position:absolute;left:'+TX+'px;top:'+(y+5)+'px;width:'+bw+'px;height:5px;background:#3a4a5e;border-radius:2px'));
-    if(macroPart>0.5)body.appendChild(el('','position:absolute;left:'+(TX+bw)+'px;top:'+(y+5)+'px;width:'+(macroPart/100*TW)+'px;height:5px;background:var(--pill);opacity:.8;border-radius:2px'));
-    else if(macroPart<-0.5)body.appendChild(el('','position:absolute;left:'+(TX+bw+macroPart/100*TW)+'px;top:'+(y+5)+'px;width:'+(-macroPart/100*TW)+'px;height:5px;background:var(--rail);opacity:.7;border-radius:2px'));
-    // live, editable value = base + your tweak + macro offset (W/S edits it)
-    const total=Math.round(Math.max(0,Math.min(100,shown+macroPart)));
-    const vc=focused?'#fff':(macroPart>0.5?'#9fc4ec':(macroPart<-0.5?'#e2a0a8':'#cfcfda'));
-    body.appendChild(tag('','position:absolute;right:8px;top:'+(y+3)+'px;font-size:8px;color:'+vc,total+'%'));
-    y+=14;
+  let y=16, idx=0; const TX=150, TW=230;
+  EN[eng].src.forEach(g=>{
+    if(g.nm){groupHeader(body,y,g.nm,g.col||COL.SRC);y+=10;}
+    g.f.forEach(f=>{
+      const off=paramOffset(s,f[0]);
+      const tweak=baseOff[eng+'|SOURCE|'+idx]||0;
+      const base=pbase(idx), shown=Math.max(2,Math.min(100,base+tweak));
+      const macroPart=Math.max(-base,Math.min(100-shown,off));
+      const focused=idx===Math.min(pfld,s.params.length-1);
+      if(focused)body.appendChild(el('','position:absolute;left:0;top:'+y+'px;width:480px;height:11px;background:rgba(214,84,96,.16)'));
+      body.appendChild(tag('','position:absolute;left:10px;top:'+(y+2)+'px;font-size:8px;color:'+(g.col||COL.SRC)+';opacity:.92',f[0]));
+      body.appendChild(el('','position:absolute;left:'+TX+'px;top:'+(y+4)+'px;width:'+TW+'px;height:4px;background:#1b1b24;border-radius:2px'));
+      const bw=shown/100*TW;
+      body.appendChild(el('','position:absolute;left:'+TX+'px;top:'+(y+4)+'px;width:'+bw+'px;height:4px;background:#3a4a5e;border-radius:2px'));
+      if(macroPart>0.5)body.appendChild(el('','position:absolute;left:'+(TX+bw)+'px;top:'+(y+4)+'px;width:'+(macroPart/100*TW)+'px;height:4px;background:var(--pill);opacity:.85;border-radius:2px'));
+      else if(macroPart<-0.5)body.appendChild(el('','position:absolute;left:'+(TX+bw+macroPart/100*TW)+'px;top:'+(y+4)+'px;width:'+(-macroPart/100*TW)+'px;height:4px;background:var(--rail);opacity:.75;border-radius:2px'));
+      const total=Math.round(Math.max(0,Math.min(100,shown+macroPart)));
+      const vc=focused?'#fff':(macroPart>0.5?'#9fc4ec':(macroPart<-0.5?'#e2a0a8':'#cfcfda'));
+      body.appendChild(tag('','position:absolute;right:8px;top:'+(y+2)+'px;font-size:8px;color:'+vc,total+'%'));
+      idx++; y+=11;
+    });
   });
 }
 // spectral 'tone' preview driven by SOURCE macros — sells inline shaping (macro tab)
@@ -293,7 +306,7 @@ function isWS(k){return k==='w'||k==='W'||k==='s'||k==='S';}
 function onKey(e){
   const k=e.key,ctrl=e.ctrlKey||e.metaKey,secs=sections();
   if(open>=0||macroOpen>=0){
-    if(k==='Escape'||k==='ArrowLeft'){open=-1;macroOpen=-1;e.preventDefault();render();return;}
+    if(k==='Escape'||k==='ArrowLeft'||k==='Enter'){open=-1;macroOpen=-1;e.preventDefault();render();return;}
     if(macroOpen>=0){ // foldout = all params; W/S edits the focused param's base
       const s=secs[macroOpen];
       if(k==='ArrowDown'){pfld=Math.min(s.params.length-1,pfld+1);e.preventDefault();render();return;}
