@@ -48,7 +48,7 @@
 </style>
 
 <h1>Sinchelles ENGINE — rich SOURCE · category nav · macro rows</h1>
-<p class="sub">click the screen, then drive with the keyboard. engine buttons switch the sound. <span style="color:#5a5a68">· build 2026-06-22f (macro + modulation stacked on the bar)</span></p>
+<p class="sub">click the screen, then drive with the keyboard. engine buttons switch the sound. <span style="color:#5a5a68">· build 2026-06-22g (MACROS page = the different macros; ENTER edits one)</span></p>
 <div class="tabs" id="tabs"></div>
 <div class="enrow" id="ens"></div>
 <div class="wrap">
@@ -142,14 +142,16 @@ const TAILM={
  MIX:[{nm:'LEVEL',tg:{VOL:0.6}},{nm:'COLOR',tg:{DJF:0.6,COMP:0.5}}],
  PATTERN:[{nm:'GRID',tg:{STEPS:0.5,RES:0.5}},{nm:'FEEL',tg:{PROB:-0.4,SWING:0.6}}],
 };
-const macroState={}, baseOff={};      // macro values (-100..100) + per-param foldout base edits
+const macroState={}, baseOff={}, macroStateY={};  // macro X / per-param base edits / macro Y
 const mkey=(e,s,i)=>e+'|'+s+'|'+i;
 const macroVal=(e,s,i)=>macroState[mkey(e,s,i)]||0;
+const macroValY=(e,s,i)=>macroStateY[mkey(e,s,i)]||0;
 const macroDisp=(e,s,i)=>{const v=macroVal(e,s,i);return v===0?'·':(v>0?'+'+v:''+v);};
 
 const COLW=81, FX0=66, NAMEX=10, ROWH=14;
 let tab='layout', eng='wave', sec=0, fld=0, open=-1;
-let macroPageOpen=-1; // ENTER on a macro -> the macro PAGE (editor), NOT a foldout (Tim)
+let macroPageOpen=-1; // a single macro's EDITOR (drilled in from the overview with ENTER)
+let macroOverviewOpen=false, ovSlot=0; // the MACROS page: the different macros, perform surface
 let pfld=0;   // foldout param cursor
 let pickOpen=null, pickIdx=0;   // full-screen picker (wavetable / model / stretch / bank)
 // rows that OWN enter in the real app: ENTER opens their picker, NOT the foldout
@@ -234,10 +236,14 @@ function render(){
   // app; the FOLDOUT is NOT — it expands INLINE (accordion) with the other sections
   // still visible above/below. (Tim 2026-06-22: don't model the foldout as a subpage.)
   if(pickOpen){renderPicker(body);footer(body);return;}
-  // ENTER on a macro opens the MACRO PAGE (editor), a full page like the real app —
-  // NOT a foldout. The foldout (below) is the ONE normal param foldout; macro offsets
-  // show as the blue meter on its bars, not as a separate macro foldout. (Tim 2026-06-22)
+  // The MACROS PAGE (Tim 2026-06-22, mirrors the real app's Decision 290 page): you reach
+  // it by NAVIGATION (Tab+Shift+Down), and it shows the DIFFERENT macros as a live X/Y
+  // perform surface — you move THROUGH the macros (Ctrl+↕ / W,S), sweep X/Y with the
+  // arrows, and ENTER drills into ONE macro's route editor. There is no separate "enter a
+  // macro to open the page" — the page IS the macros. The editor is checked FIRST so it
+  // draws OVER the still-open overview (real app: editor wins on the MACROS page).
   if(macroPageOpen>=0){renderMacroPage(body,macroPageOpen);footer(body);return;}
+  if(macroOverviewOpen){renderMacroOverview(body);footer(body);return;}
   const expanded = open;   // -1 when nothing expanded
   // SOURCE is split across several "sections" (layout: one per group; hybrid: macro
   // row + 2 param rows) but is logically ONE section: when any SOURCE part is
@@ -324,15 +330,45 @@ function renderPicker(body){
     d.textContent=(sel?'> ':'  ')+it;body.appendChild(d);
   });
 }
-// MACRO PAGE (Tim 2026-06-22): ENTER on a macro opens this editor PAGE (mirrors the
-// real app's MACROS page) — assign/unassign target params, set each route's range,
-// invert, mode. NOT a foldout; the macro's effect shows as the blue meter on the
-// normal foldout bars instead.
+// MACROS PAGE = the OVERVIEW of the different macros (Tim 2026-06-22, mirrors Decision 290).
+// Reached by NAVIGATION (Tab+Shift+Down) — the page IS the macros, no separate "enter". A
+// live X/Y perform surface: move THROUGH the 4 macros (Ctrl+↕ / W,S), sweep X (←→) and Y
+// (↕), ENTER drills into one macro's route editor (renderMacroPage).
+function renderMacroOverview(body){
+  const macros=SRCM[eng];
+  if(ovSlot>=macros.length)ovSlot=macros.length-1; if(ovSlot<0)ovSlot=0;
+  body.appendChild(el('','position:absolute;left:0;top:0;width:480px;height:13px;background:#101826'));
+  body.appendChild(tag('','position:absolute;left:6px;top:2px;font-size:8px;color:'+COL.SRC,
+    'MACROS   T1 '+EN[eng].name+'   '+(ovSlot+1)+'/'+macros.length+'   ·  the macros — move through them, perform X/Y, ENTER edits'));
+  const bip=(x,y,w,val,col)=>{ // bipolar live bar (-100..100): center tick + head
+    body.appendChild(el('','position:absolute;left:'+x+'px;top:'+y+'px;width:'+w+'px;height:4px;background:#1b1b24;border-radius:2px'));
+    const cx=x+w/2, hx=cx+(Math.max(-100,Math.min(100,val))/100)*(w/2);
+    if(val>0.5)body.appendChild(el('','position:absolute;left:'+cx+'px;top:'+y+'px;width:'+(hx-cx)+'px;height:4px;background:'+col+';border-radius:2px'));
+    else if(val<-0.5)body.appendChild(el('','position:absolute;left:'+hx+'px;top:'+y+'px;width:'+(cx-hx)+'px;height:4px;background:'+col+';border-radius:2px'));
+    body.appendChild(el('','position:absolute;left:'+cx+'px;top:'+(y-1)+'px;width:1px;height:6px;background:#5a5a6a'));
+    body.appendChild(el('','position:absolute;left:'+(hx-1)+'px;top:'+(y-1)+'px;width:2px;height:6px;background:'+col));
+  };
+  let y=18; const h=Math.min(58,(258/macros.length));
+  macros.forEach((m,i)=>{
+    const sel=i===ovSlot;
+    body.appendChild(el('','position:absolute;left:4px;top:'+y+'px;width:472px;height:'+(h-4)+'px;background:'+(sel?'rgba(64,140,220,.16)':'#0e0e15')+';border:1px solid '+(sel?'rgba(95,155,235,.6)':'#1b1b24')+';border-radius:3px'));
+    body.appendChild(tag('','position:absolute;left:12px;top:'+(y+5)+'px;font-size:9px;color:'+(sel?'#cfe3ff':COL.SRC),(sel?'● ':'  ')+m.nm));
+    body.appendChild(tag('','position:absolute;left:14px;top:'+(y+19)+'px;font-size:8px;color:#8a8a98','→ '+Object.keys(m.tg).join(' · ')));
+    const bx=232, bw=160;
+    body.appendChild(tag('','position:absolute;left:'+(bx-16)+'px;top:'+(y+4)+'px;font-size:8px;color:#9fb6e8','X'));
+    bip(bx,y+7,bw,macroVal(eng,'SOURCE',i),'#4f9cf0');
+    body.appendChild(tag('','position:absolute;left:'+(bx-16)+'px;top:'+(y+22)+'px;font-size:8px;color:#9fb6e8','Y'));
+    bip(bx,y+25,bw,macroValY(eng,'SOURCE',i),'#7fb6ff');
+    y+=h;
+  });
+}
+// MACRO EDITOR (drilled in from the overview with ENTER): one macro's routes — assign /
+// unassign target params, set each route's range, invert, mode. ESC returns to the overview.
 function renderMacroPage(body,mi){
   const m=SRCM[eng][mi], targets=Object.entries(m.tg), cur=Math.min(pfld,targets.length);
   body.appendChild(el('','position:absolute;left:0;top:0;width:480px;height:13px;background:#101826'));
   body.appendChild(tag('','position:absolute;left:6px;top:2px;font-size:8px;color:'+COL.SRC,
-    'MACRO  '+m.nm+'   ·  mode: OFFSET (bipolar)  ·  assign · range · invert'));
+    'MACROS ▸ '+m.nm+'   ·  mode: OFFSET (bipolar)  ·  assign · range · invert'));
   let y=18;
   targets.forEach(([p,w],i)=>{
     const sel=i===cur, reach=Math.round(Math.abs(w)*100), dir=w>=0?'+':'−';
@@ -354,7 +390,8 @@ function colX(i){return FX0+i*COLW;}
 function footer(body){
   const f=el('foot');
   f.innerHTML = pickOpen ? '<b style="color:#9fb6e8">'+pickOpen+' picker</b> · &#8597; choose · ENT/ESC close'
-    : macroPageOpen>=0 ? '<b style="color:#9fb6e8">macro page</b> · &#8597; route · W/S range · ENT assign · ESC back'
+    : macroPageOpen>=0 ? '<b style="color:#9fb6e8">macro editor</b> · &#8597; route · W/S range · ESC → MACROS'
+    : macroOverviewOpen ? '<b style="color:#9fb6e8">MACROS</b> · CT&#8597;/W,S pick macro · &#8596; X · &#8597; Y · ENT edit · ESC back'
     : open>=0 ? '&#8597; param · W/S edit base · ENT/ESC close'
     : tab==='macro' ? '<b style="color:#9fb6e8">W/S shape macro</b> · &#8596; pick · ENT → all params · CT&#8597; jump'
     : tab==='hybrid' ? '<b style="color:#9fb6e8">W/S shape macro</b> · &#8597; macros / key params · ENT → all · CT&#8597; jump'
@@ -470,11 +507,24 @@ function onKey(e){
     else if(k==='ArrowUp')pickIdx=Math.max(0,pickIdx-1);
     else if(k==='Enter'||k==='Escape'||k==='ArrowLeft')pickOpen=null;
     e.preventDefault();render();return;}
-  if(macroPageOpen>=0){ // macro PAGE (editor): pick a target route; ESC/Left/Enter back
+  if(macroPageOpen>=0){ // macro EDITOR (drilled in from the overview): ESC/← back to overview
     const n=Object.keys(SRCM[eng][macroPageOpen].tg).length;
-    if(k==='Escape'||k==='ArrowLeft'||k==='Enter')macroPageOpen=-1;
-    else if(k==='ArrowDown')pfld=Math.min(n,pfld+1);   // n = the +assign row
+    if(k==='Escape'||k==='ArrowLeft')macroPageOpen=-1;  // back to the MACROS overview (still open)
+    else if(k==='ArrowDown')pfld=Math.min(n,pfld+1);    // n = the +assign row
     else if(k==='ArrowUp')pfld=Math.max(0,pfld-1);
+    e.preventDefault();render();return;
+  }
+  if(macroOverviewOpen){ // the MACROS page: move THROUGH the macros, perform X/Y, ENTER edits
+    const macros=SRCM[eng], n=macros.length, mk=mkey(eng,'SOURCE',ovSlot);
+    if(k==='Escape')macroOverviewOpen=false;                                    // back to engine page
+    else if(k==='Enter'){macroPageOpen=ovSlot;pfld=0;}                          // drill into the editor
+    else if((ctrl&&(k==='ArrowUp'||k==='ArrowDown'))||isWS(k)){                 // pick the macro (move through them)
+      const up=(k==='ArrowUp'||k==='w'||k==='W'); ovSlot=Math.max(0,Math.min(n-1,ovSlot+(up?-1:1)));
+    }
+    else if(k==='ArrowLeft'||k==='ArrowRight')                                  // perform X
+      macroState[mk]=Math.max(-100,Math.min(100,(macroState[mk]||0)+(k==='ArrowRight'?10:-10)));
+    else if(k==='ArrowUp'||k==='ArrowDown')                                     // perform Y
+      macroStateY[mk]=Math.max(-100,Math.min(100,(macroStateY[mk]||0)+(k==='ArrowUp'?10:-10)));
     e.preventDefault();render();return;
   }
   if(open>=0){ // the ONE normal foldout: param bars (macro offsets shown as the meter)
@@ -499,8 +549,8 @@ function onKey(e){
 }
 function nF(s){return s.isMacro?s.macros.length:s.rows[0].length;}
 function openFold(){const s=sections()[sec];
-  if(s.isMacro){macroPageOpen=Math.min(fld,s.macros.length-1);pfld=0;}  // macro -> macro PAGE
-  else open=sec;}                                                        // param/section -> foldout
+  if(s.isMacro){macroOverviewOpen=true;ovSlot=Math.min(fld,s.macros.length-1);}  // macro -> MACROS page (the macros)
+  else open=sec;}                                                                 // param/section -> foldout
 
 const LEG={
  layout:`<h3>1 · Engine page — rich SOURCE + category nav</h3>
@@ -512,7 +562,7 @@ const LEG={
  macro:`<h3>2 · Macro SOURCE (easy layer)</h3>
    <p>Same page, but <b>SOURCE is shown as 4 easy macros</b> instead of raw params (the rest of the page is unchanged — macros are <b>SOURCE-only</b>). The full real params are always one press away.</p>
    <ul><li><span class="k">←/→</span> pick a macro, <span class="k">W/S</span> shape it — right inline. Macros are <b>bipolar</b> (−/<b>·</b>/+, center = no effect). Watch the <b>TONE</b> preview move.</li>
-   <li><span class="k">ENTER</span> on a <b>macro</b> → its <b>macro page</b> (assign / unassign / range / invert / mode) — NOT a separate foldout. <span class="k">ENTER</span> on a <b>param</b> → the normal foldout.</li>
+   <li>The <b>MACROS page</b> is its own page (real app: <span class="k">Tab+Shift+Down</span>) — there's no separate "enter a macro": the page <i>is</i> the macros. It shows all 4 as a live <b>X/Y perform</b> surface; <span class="k">Ctrl+↕</span>/<span class="k">W,S</span> move <i>through</i> the macros, <span class="k">←→</span> sweep X, <span class="k">↕</span> sweep Y, and <span class="k">ENTER</span> drills into one macro's <b>editor</b> (routes / range / invert / mode). Here, <span class="k">ENTER</span> on the engine macro row opens that page. <span class="k">ENTER</span> on a <b>param</b> → the normal foldout.</li>
    <li>In that normal foldout, every macro-moved param shows a <b>blue macro meter</b> (like the amber LFO/auto one): a <b>base tick</b> (what it's set to), a <b>blue outline</b> (the macro's reach, from→to) and a <b>bright head</b> (where the macro sits now). Same bars — no separate macro foldout.</li>
    <li>A param can have <b>both</b>: macro (blue) re-sets the value, then <b>LFO/auto modulation (amber)</b> oscillates <i>around</i> that post-macro point — stacked on the same bar (amber depth span + live head above the blue). <span class="k">CUT</span>/<span class="k">RES</span> = macro + mod; <span class="k">F.AMT</span> = mod only.</li>
    <li>Each engine gets its own 4 macros, named for what they touch (WAVE: OPEN / CLANG / WEIGHT / DIRT).</li></ul>`,
@@ -522,7 +572,7 @@ const LEG={
    <li>Next <b>two rows</b> = the ~10 key params for that engine (WAVE: OSC A / OSC B / MORPH / CUT / RES, then DRIVE / FOLD / RING / SYNC / F.AMT).</li>
    <li><span class="k">ENTER</span> is row-aware: a <b>▸ selector</b> param (OSC A/OSC B → wavetable, STRETCH → mode, BANK → browser) opens its <b>picker</b>; any other param → the full grouped SOURCE foldout. Tail sections stay lean (1 row).</li></ul>`,
 };
-function setTab(t){tab=t;sec=0;fld=0;open=-1;macroPageOpen=-1;pfld=0;pickOpen=null;
+function setTab(t){tab=t;sec=0;fld=0;open=-1;macroPageOpen=-1;macroOverviewOpen=false;ovSlot=0;pfld=0;pickOpen=null;
   document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x.dataset.t===t));
   document.getElementById('legend').innerHTML=LEG[t];
   document.getElementById('hint').textContent=
@@ -541,7 +591,7 @@ function setTab(t){tab=t;sec=0;fld=0;open=-1;macroPageOpen=-1;pfld=0;pickOpen=nu
     const d=el('tab');d.textContent=l;d.dataset.t=t;d.onclick=()=>setTab(t);tb.appendChild(d);});
   const eb=document.getElementById('ens');
   Object.keys(EN).forEach(k=>{const d=el('en');d.textContent=EN[k].name;d.dataset.e=k;d.classList.toggle('on',k===eng);
-    d.onclick=()=>{eng=k;sec=0;fld=0;open=-1;macroPageOpen=-1;pfld=0;pickOpen=null;
+    d.onclick=()=>{eng=k;sec=0;fld=0;open=-1;macroPageOpen=-1;macroOverviewOpen=false;ovSlot=0;pfld=0;pickOpen=null;
       document.querySelectorAll('.en').forEach(x=>x.classList.toggle('on',x.dataset.e===k));render();};eb.appendChild(d);});
   const dev=document.getElementById('dev');dev.addEventListener('keydown',onKey);dev.addEventListener('click',()=>dev.focus());
   const q=new URLSearchParams(location.search);
@@ -549,7 +599,8 @@ function setTab(t){tab=t;sec=0;fld=0;open=-1;macroPageOpen=-1;pfld=0;pickOpen=nu
   setTab(['layout','macro','hybrid'].includes(q.get('tab'))?q.get('tab'):'layout');
   if(q.get('sec'))sec=+q.get('sec'); if(q.get('fld'))fld=+q.get('fld');
   if(q.get('open')==='1'||q.get('macro')==='1'){open=sec;fld=+(q.get('pfld')||0);} // foldout (one kind now)
-  if(q.get('mpage')!==null&&q.get('mpage')!==undefined&&q.get('mpage')!==''){macroPageOpen=+q.get('mpage');pfld=0;} // macro page demo
+  if(q.get('mov')!==null){macroOverviewOpen=true;ovSlot=+(q.get('mov')||0);} // MACROS overview demo
+  if(q.get('mpage')!==null&&q.get('mpage')!==undefined&&q.get('mpage')!==''){macroOverviewOpen=true;macroPageOpen=+q.get('mpage');ovSlot=+q.get('mpage');pfld=0;} // editor over overview
   q.getAll('mv').forEach(s=>{const [sk,i,v]=s.split(',');macroState[mkey(eng,sk,+i)]=+v;}); // demo preset
   if(q.get('pick')&&pickerFor(eng,q.get('pick'))){pickOpen=q.get('pick');pickIdx=+(q.get('pidx')||0);} // demo picker
   render();
