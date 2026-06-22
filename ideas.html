@@ -292,10 +292,10 @@ function footer(body){
     : '&#8596; field · &#8597; row · <b style="color:#9fb6e8">Ctrl+arrows = jump category</b> · ENT open';
   body.appendChild(f);
 }
-// a sub-category divider + tinted name inside a foldout (Tim: distinguish groups)
-function groupHeader(body,y,nm,col){
-  body.appendChild(el('','position:absolute;left:6px;width:468px;top:'+(y+4)+'px;height:1px;background:#2d2d3b'));
-  body.appendChild(tag('','position:absolute;left:6px;top:'+y+'px;font-size:7px;letter-spacing:.6px;color:'+col+';opacity:.95',nm));
+// a sub-category divider + tinted name inside a foldout column (Tim: distinguish groups)
+function groupHeader(body,x,w,y,nm,col){
+  body.appendChild(el('','position:absolute;left:'+(x+2)+'px;width:'+(w-8)+'px;top:'+(y+4)+'px;height:1px;background:#2d2d3b'));
+  body.appendChild(tag('','position:absolute;left:'+(x+2)+'px;top:'+y+'px;font-size:7px;letter-spacing:.5px;color:'+col+';opacity:.95',nm));
 }
 // groups of a section for the foldout: SOURCE -> its engine groups; tail -> one group
 function foldGroups(s){
@@ -304,54 +304,82 @@ function foldGroups(s){
 }
 function renderFold(body,secs){
   const s=secs[open];
+  if(s.src){renderSourceFoldout(body,false);return;}   // SOURCE: grouped + 2-col when long
   const fh=el('','position:absolute;left:0;top:0;width:480px;height:13px;display:flex;align-items:center;padding:0 6px;font-size:8px;color:'+s.col+';background:#1a1016');
-  fh.textContent=(s.src?'SOURCE':s.key)+' — all params';body.appendChild(fh);
-  const groups=foldGroups(s); const total=groups.reduce((n,g)=>n+g.f.length,0);
-  let y=16, idx=0;
-  groups.forEach(g=>{
-    if(g.nm){groupHeader(body,y,g.nm,g.col);y+=10;}
-    g.f.forEach(f=>{
-      const focused=idx===Math.min(fld,total-1);
-      if(focused)body.appendChild(el('','position:absolute;left:0;top:'+y+'px;width:480px;height:11px;background:rgba(214,84,96,.16)'));
-      body.appendChild(tag('','position:absolute;left:10px;top:'+(y+2)+'px;font-size:8px;color:'+g.col+';opacity:.92',f[0]));
-      body.appendChild(el('','position:absolute;left:150px;top:'+(y+4)+'px;width:230px;height:4px;background:#1b1b24;border-radius:2px'));
-      body.appendChild(el('','position:absolute;left:150px;top:'+(y+4)+'px;width:'+Math.min(230,30+(idx*53%190))+'px;height:4px;background:#3a6ea0;border-radius:2px'));
-      body.appendChild(tag('','position:absolute;right:8px;top:'+(y+2)+'px;font-size:8px;color:#cfcfda',f[1]));
-      idx++; y+=11;
-    });
+  fh.textContent=s.key+' — all params';body.appendChild(fh);
+  const fields=s.rows.flat(), total=fields.length;
+  let y=16;
+  fields.forEach((f,i)=>{
+    const foc=i===Math.min(fld,total-1);
+    if(foc)body.appendChild(el('','position:absolute;left:0;top:'+y+'px;width:480px;height:11px;background:rgba(214,84,96,.16)'));
+    body.appendChild(tag('','position:absolute;left:10px;top:'+(y+2)+'px;font-size:8px;color:'+s.col+';opacity:.92',f[0]));
+    body.appendChild(el('','position:absolute;left:150px;top:'+(y+4)+'px;width:230px;height:4px;background:#1b1b24;border-radius:2px'));
+    body.appendChild(el('','position:absolute;left:150px;top:'+(y+4)+'px;width:'+(pbase(i)/100*230)+'px;height:4px;background:#3a6ea0;border-radius:2px'));
+    body.appendChild(tag('','position:absolute;right:8px;top:'+(y+2)+'px;font-size:8px;color:'+(foc?'#fff':'#cfcfda'),f[1]));
+    y+=11;
   });
 }
 function tag(c,css,txt){const d=el(c,css);d.textContent=txt;return d;}
 function pbase(i){return 20+((i*43)%62);}  // deterministic base fill % per param
 // SOURCE macro contribution to a param, summed over the engine's SOURCE macros
 function paramOffset(label){let o=0;SRCM[eng].forEach((m,i)=>{const w=m.tg[label];if(w)o+=macroVal(eng,'SOURCE',i)*w;});return o;}
-function renderMacroFold(body,s){
-  const fh=el('','position:absolute;left:0;top:0;width:480px;height:13px;display:flex;align-items:center;padding:0 6px;font-size:8px;color:'+s.col+';background:#1a1016');
-  fh.textContent='SOURCE — all params  ·  macros: '+SRCM[eng].map((m,i)=>m.nm+' '+macroDisp(eng,'SOURCE',i)).join('  ');
+function srcGroups(){return EN[eng].src.map(g=>({nm:g.nm||'',col:g.col||COL.SRC,f:g.f}));}
+// group-major split into 1 or 2 columns. matches the LIVE app's 2-column foldout
+// (track_rows.h kV3FoldoutTwoColMin: >12 open params -> 2 cols) but keeps whole
+// groups together so the sub-category headers stay coherent (the live app is
+// column-major + category colour, no headers — this is the grouped variant).
+function packGroups(groups){
+  const total=groups.reduce((n,g)=>n+g.f.length,0);
+  if(total<=12) return [groups];
+  const half=Math.ceil(total/2); let k=0,acc=0;
+  for(let i=0;i<groups.length;i++){const n=groups[i].f.length; if(k>0&&acc+n>half)break; acc+=n;k=i+1;}
+  k=Math.max(1,Math.min(k,groups.length-1));
+  return [groups.slice(0,k),groups.slice(k)];
+}
+function colHeight(g){return g.reduce((a,x)=>a+(x.nm?10:0)+x.f.length*11,0);}
+// the SOURCE foldout — grouped, with the live 2-column split when long. macro=true
+// layers the macro offsets (blue +/red -) + editable %; macro=false shows raw values.
+function renderSourceFoldout(body,macro){
+  const fh=el('','position:absolute;left:0;top:0;width:480px;height:13px;display:flex;align-items:center;padding:0 6px;font-size:8px;color:'+COL.SRC+';background:#1a1016');
+  fh.textContent=macro
+    ? 'SOURCE · all params · '+SRCM[eng].map((m,i)=>m.nm+' '+macroDisp(eng,'SOURCE',i)).join(' ')
+    : 'SOURCE — all params';
   body.appendChild(fh);
-  let y=16, idx=0; const TX=150, TW=230;
-  EN[eng].src.forEach(g=>{
-    if(g.nm){groupHeader(body,y,g.nm,g.col||COL.SRC);y+=10;}
-    g.f.forEach(f=>{
-      const off=paramOffset(f[0]);
-      const tweak=baseOff[eng+'|SOURCE|'+idx]||0;
-      const base=pbase(idx), shown=Math.max(2,Math.min(100,base+tweak));
-      const macroPart=Math.max(-base,Math.min(100-shown,off));
-      const focused=idx===Math.min(pfld,s.params.length-1);
-      if(focused)body.appendChild(el('','position:absolute;left:0;top:'+y+'px;width:480px;height:11px;background:rgba(214,84,96,.16)'));
-      body.appendChild(tag('','position:absolute;left:10px;top:'+(y+2)+'px;font-size:8px;color:'+(g.col||COL.SRC)+';opacity:.92',f[0]));
-      body.appendChild(el('','position:absolute;left:'+TX+'px;top:'+(y+4)+'px;width:'+TW+'px;height:4px;background:#1b1b24;border-radius:2px'));
-      const bw=shown/100*TW;
-      body.appendChild(el('','position:absolute;left:'+TX+'px;top:'+(y+4)+'px;width:'+bw+'px;height:4px;background:#3a4a5e;border-radius:2px'));
-      if(macroPart>0.5)body.appendChild(el('','position:absolute;left:'+(TX+bw)+'px;top:'+(y+4)+'px;width:'+(macroPart/100*TW)+'px;height:4px;background:var(--pill);opacity:.85;border-radius:2px'));
-      else if(macroPart<-0.5)body.appendChild(el('','position:absolute;left:'+(TX+bw+macroPart/100*TW)+'px;top:'+(y+4)+'px;width:'+(-macroPart/100*TW)+'px;height:4px;background:var(--rail);opacity:.75;border-radius:2px'));
-      const total=Math.round(Math.max(0,Math.min(100,shown+macroPart)));
-      const vc=focused?'#fff':(macroPart>0.5?'#9fc4ec':(macroPart<-0.5?'#e2a0a8':'#cfcfda'));
-      body.appendChild(tag('','position:absolute;right:8px;top:'+(y+2)+'px;font-size:8px;color:'+vc,total+'%'));
-      idx++; y+=11;
+  const groups=srcGroups(), total=groups.reduce((n,g)=>n+g.f.length,0);
+  const cols=packGroups(groups), two=cols.length===2, colW=two?234:468;
+  const fc=Math.min(macro?pfld:fld,total-1);
+  let idx=0;
+  cols.forEach((cg,ci)=>{
+    const x=two?(ci===0?4:242):6; let y=16;
+    cg.forEach(g=>{
+      if(g.nm){groupHeader(body,x,colW,y,g.nm,g.col);y+=10;}
+      g.f.forEach(f=>{
+        const mi=idx, foc=fc===mi, barX=x+74, barW=colW-126;
+        if(foc)body.appendChild(el('','position:absolute;left:'+x+'px;top:'+y+'px;width:'+colW+'px;height:11px;background:rgba(214,84,96,.16)'));
+        body.appendChild(tag('','position:absolute;left:'+(x+8)+'px;top:'+(y+2)+'px;font-size:8px;color:'+g.col+';opacity:.92',f[0]));
+        if(pickerFor(eng,f[0]))body.appendChild(tag('','position:absolute;left:'+(x+8+f[0].length*5+2)+'px;top:'+(y+2)+'px;font-size:8px;color:#6f86c8','▸'));
+        body.appendChild(el('','position:absolute;left:'+barX+'px;top:'+(y+4)+'px;width:'+barW+'px;height:4px;background:#1b1b24;border-radius:2px'));
+        if(macro){
+          const off=paramOffset(f[0]), tweak=baseOff[eng+'|SOURCE|'+mi]||0;
+          const base=pbase(mi), shown=Math.max(2,Math.min(100,base+tweak));
+          const mp=Math.max(-base,Math.min(100-shown,off)), bw=shown/100*barW;
+          body.appendChild(el('','position:absolute;left:'+barX+'px;top:'+(y+4)+'px;width:'+bw+'px;height:4px;background:#3a4a5e;border-radius:2px'));
+          if(mp>0.5)body.appendChild(el('','position:absolute;left:'+(barX+bw)+'px;top:'+(y+4)+'px;width:'+(mp/100*barW)+'px;height:4px;background:var(--pill);opacity:.85;border-radius:2px'));
+          else if(mp<-0.5)body.appendChild(el('','position:absolute;left:'+(barX+bw+mp/100*barW)+'px;top:'+(y+4)+'px;width:'+(-mp/100*barW)+'px;height:4px;background:var(--rail);opacity:.75;border-radius:2px'));
+          const tv=Math.round(Math.max(0,Math.min(100,shown+mp)))+'%', vc=foc?'#fff':(mp>0.5?'#9fc4ec':(mp<-0.5?'#e2a0a8':'#cfcfda'));
+          body.appendChild(tag('','position:absolute;left:'+(x+colW-4-tv.length*5)+'px;top:'+(y+2)+'px;font-size:8px;color:'+vc,tv));
+        } else {
+          const v=''+f[1];
+          body.appendChild(el('','position:absolute;left:'+barX+'px;top:'+(y+4)+'px;width:'+(pbase(mi)/100*barW)+'px;height:4px;background:#3a6ea0;border-radius:2px'));
+          body.appendChild(tag('','position:absolute;left:'+(x+colW-4-v.length*5)+'px;top:'+(y+2)+'px;font-size:8px;color:'+(foc?'#fff':'#cfcfda'),v));
+        }
+        idx++; y+=11;
+      });
     });
   });
+  if(two)body.appendChild(el('vline','left:240px;top:15px;height:'+(Math.max(colHeight(cols[0]),colHeight(cols[1]))+2)+'px'));
 }
+function renderMacroFold(body,s){renderSourceFoldout(body,true);}
 // spectral 'tone' preview driven by SOURCE macros — sells inline shaping (macro tab)
 function toneBars(body){
   const n=10, x0=8, w=14, gap=2, top=8, h=34;
@@ -405,7 +433,7 @@ const LEG={
    <p>Only <b>SOURCE</b> grows, as far as the engine earns (≤5 rows, grouped); every other section stays <b>one lean row</b> of its five most-used params.</p>
    <ul><li><span class="k">WAVE</span> — a row per oscillator (OSC A / OSC B), a BLEND row, then <b>FILTER</b> + <b>F.ENV</b> pulled up from VOICE (unison/detune stay on VOICE). The showcase.</li>
    <li><span class="k">DITTO</span> — dual genome: VOICE A / VOICE B / SHARED. The rest stay lean.</li>
-   <li><span class="k">ENTER</span> is row-aware (matches the real app): on a <b>▸ selector row</b> it opens that row's <b>picker</b> — OSC A/OSC B → wavetable, MODEL → model, STRETCH → mode, BANK → sample browser. On any other row → the foldout of <b>all</b> source params.</li>
+   <li><span class="k">ENTER</span> is row-aware (matches the real app): on a <b>▸ selector row</b> it opens that row's <b>picker</b> — OSC A/OSC B → wavetable, MODEL → model, STRETCH → mode, BANK → sample browser. On any other row → the foldout of <b>all</b> source params. A long foldout (WAVE, DITTO — &gt;12 params) <b>splits into two columns</b>, like sin/main already does.</li>
    <li><b>Ctrl + arrows = jump category</b> (fixed chords, shown as badges at the right edge): <span class="k">⌃↑</span> SOURCE · <span class="k">⌃↓</span> PATTERN · <span class="k">⌃←</span> ENV · <span class="k">⌃→</span> MIX. Plain arrows walk.</li></ul>`,
  macro:`<h3>2 · Macro SOURCE (easy layer)</h3>
    <p>Same page, but <b>SOURCE is shown as 4 easy macros</b> instead of raw params (the rest of the page is unchanged — macros are <b>SOURCE-only</b>). The full real params are always one press away.</p>
