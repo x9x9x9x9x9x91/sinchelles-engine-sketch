@@ -48,7 +48,7 @@
 </style>
 
 <h1>Sinchelles ENGINE — rich SOURCE · category nav · macro rows</h1>
-<p class="sub">click the screen, then drive with the keyboard. engine buttons switch the sound. <span style="color:#5a5a68">· build 2026-06-22d (macro meter: base + range + head)</span></p>
+<p class="sub">click the screen, then drive with the keyboard. engine buttons switch the sound. <span style="color:#5a5a68">· build 2026-06-22e (macro meter on normal foldout + macro page)</span></p>
 <div class="tabs" id="tabs"></div>
 <div class="enrow" id="ens"></div>
 <div class="wrap">
@@ -144,7 +144,8 @@ const macroVal=(e,s,i)=>macroState[mkey(e,s,i)]||0;
 const macroDisp=(e,s,i)=>{const v=macroVal(e,s,i);return v===0?'·':(v>0?'+'+v:''+v);};
 
 const COLW=81, FX0=66, NAMEX=10, ROWH=14;
-let tab='layout', eng='wave', sec=0, fld=0, open=-1, macroOpen=-1;
+let tab='layout', eng='wave', sec=0, fld=0, open=-1;
+let macroPageOpen=-1; // ENTER on a macro -> the macro PAGE (editor), NOT a foldout (Tim)
 let pfld=0;   // foldout param cursor
 let pickOpen=null, pickIdx=0;   // full-screen picker (wavetable / model / stretch / bank)
 // rows that OWN enter in the real app: ENTER opens their picker, NOT the foldout
@@ -229,8 +230,11 @@ function render(){
   // app; the FOLDOUT is NOT — it expands INLINE (accordion) with the other sections
   // still visible above/below. (Tim 2026-06-22: don't model the foldout as a subpage.)
   if(pickOpen){renderPicker(body);footer(body);return;}
-  const expanded = open>=0 ? open : (macroOpen>=0 ? macroOpen : -1);
-  const macroMode = macroOpen>=0;
+  // ENTER on a macro opens the MACRO PAGE (editor), a full page like the real app —
+  // NOT a foldout. The foldout (below) is the ONE normal param foldout; macro offsets
+  // show as the blue meter on its bars, not as a separate macro foldout. (Tim 2026-06-22)
+  if(macroPageOpen>=0){renderMacroPage(body,macroPageOpen);footer(body);return;}
+  const expanded = open;   // -1 when nothing expanded
   // SOURCE is split across several "sections" (layout: one per group; hybrid: macro
   // row + 2 param rows) but is logically ONE section: when any SOURCE part is
   // expanded, the whole SOURCE foldout replaces ALL of them (rendered once).
@@ -239,7 +243,7 @@ function render(){
   let y=2, srcDone=false;
   secs.forEach((s,si)=>{
     if(srcFam(s)){
-      if(expandedSrc){ if(!srcDone){ y=drawExpandedSource(body,y,macroMode)+2; srcDone=true; } return; }
+      if(expandedSrc){ if(!srcDone){ y=drawExpandedSource(body,y)+2; srcDone=true; } return; }
       drawCollapsedRow(body,s,si,y, expanded<0 && si===sec, expanded<0); y+=ROWH; return;
     }
     if(si===expanded){ y=drawExpandedTail(body,s,y)+2; return; }
@@ -272,14 +276,15 @@ function drawCollapsedRow(body,s,si,y,focused,showBadge){
     if(!s.isMacro&&pickerFor(eng,f[0])){const vw=(''+f[1]).length*5+4;const g=el('','position:absolute;left:'+(x+lw+vw)+'px;top:'+(y+3)+'px;font-size:8px;color:'+(ff?'var(--pillink)':'#6f86c8'));g.textContent='▸';body.appendChild(g);}
   });
 }
-// SOURCE expanded INLINE (accordion): one identity header ("SOURCE"), then ALL source
-// params grouped + 2-col when long, expanding below it. macroMode layers the offsets.
-function drawExpandedSource(body,yStart,macroMode){
+// SOURCE expanded INLINE (accordion): one identity header, then ALL source params
+// grouped + 2-col when long. The ONE normal foldout — macro offsets show as the blue
+// meter on the bars (drawSourceParams), there is no separate "macro foldout".
+function drawExpandedSource(body,yStart){
   body.appendChild(el('','position:absolute;left:0;top:'+yStart+'px;width:480px;height:13px;background:#18101e'));
   body.appendChild(el('','position:absolute;left:2px;top:'+yStart+'px;width:4px;height:13px;background:'+COL.SRC));
-  const title=macroMode?'SOURCE  '+SRCM[eng].map((m,i)=>m.nm+' '+macroDisp(eng,'SOURCE',i)).join('  '):'SOURCE';
+  const title='SOURCE  '+SRCM[eng].map((m,i)=>m.nm+' '+macroDisp(eng,'SOURCE',i)).join('  ');
   body.appendChild(tag('','position:absolute;left:'+NAMEX+'px;top:'+(yStart+3)+'px;font-size:8px;color:'+COL.SRC, title));
-  return drawSourceParams(body,macroMode,yStart+14);
+  return drawSourceParams(body,false,yStart+14);
 }
 // a tail section (VOICE/ENV/MIX/PATTERN) expanded INLINE: header + its own params flat.
 function drawExpandedTail(body,s,yStart){
@@ -315,12 +320,38 @@ function renderPicker(body){
     d.textContent=(sel?'> ':'  ')+it;body.appendChild(d);
   });
 }
+// MACRO PAGE (Tim 2026-06-22): ENTER on a macro opens this editor PAGE (mirrors the
+// real app's MACROS page) — assign/unassign target params, set each route's range,
+// invert, mode. NOT a foldout; the macro's effect shows as the blue meter on the
+// normal foldout bars instead.
+function renderMacroPage(body,mi){
+  const m=SRCM[eng][mi], targets=Object.entries(m.tg), cur=Math.min(pfld,targets.length);
+  body.appendChild(el('','position:absolute;left:0;top:0;width:480px;height:13px;background:#101826'));
+  body.appendChild(tag('','position:absolute;left:6px;top:2px;font-size:8px;color:'+COL.SRC,
+    'MACRO  '+m.nm+'   ·  mode: OFFSET (bipolar)  ·  assign · range · invert'));
+  let y=18;
+  targets.forEach(([p,w],i)=>{
+    const sel=i===cur, reach=Math.round(Math.abs(w)*100), dir=w>=0?'+':'−';
+    if(sel)body.appendChild(el('','position:absolute;left:0;top:'+y+'px;width:480px;height:13px;background:rgba(64,140,220,.16)'));
+    body.appendChild(tag('','position:absolute;left:10px;top:'+(y+2)+'px;font-size:8px;color:'+(sel?'#fff':'#cfe3ff'),p));
+    // reach bar — the route's range (centered = bipolar), blue (matches the foldout meter)
+    body.appendChild(el('','position:absolute;left:130px;top:'+(y+4)+'px;width:150px;height:4px;background:#1b1b24;border-radius:2px'));
+    body.appendChild(el('','position:absolute;left:'+(205-reach*0.75)+'px;top:'+(y+4)+'px;width:'+Math.max(2,reach*1.5)+'px;height:4px;background:rgba(95,155,235,.6);border-radius:2px'));
+    body.appendChild(el('','position:absolute;left:205px;top:'+(y+2)+'px;width:1px;height:7px;background:#cfe0ff'));
+    body.appendChild(tag('','position:absolute;left:300px;top:'+(y+2)+'px;font-size:8px;color:#9fb6e8','reach '+dir+reach+'%'));
+    body.appendChild(tag('','position:absolute;left:392px;top:'+(y+2)+'px;font-size:8px;color:#7a7a88','OFS'));
+    y+=15;
+  });
+  const selA=cur===targets.length;
+  if(selA)body.appendChild(el('','position:absolute;left:0;top:'+y+'px;width:480px;height:13px;background:rgba(64,140,220,.16)'));
+  body.appendChild(tag('','position:absolute;left:10px;top:'+(y+2)+'px;font-size:8px;color:'+(selA?'#fff':'#6f86c8'),'+ assign parameter…'));
+}
 function colX(i){return FX0+i*COLW;}
 function footer(body){
   const f=el('foot');
   f.innerHTML = pickOpen ? '<b style="color:#9fb6e8">'+pickOpen+' picker</b> · &#8597; choose · ENT/ESC close'
-    : macroOpen>=0 ? 'W/S edit param · &#8597; pick · ENT/ESC close'
-    : open>=0 ? '&#8597; param · ENT/ESC close'
+    : macroPageOpen>=0 ? '<b style="color:#9fb6e8">macro page</b> · &#8597; route · W/S range · ENT assign · ESC back'
+    : open>=0 ? '&#8597; param · W/S edit base · ENT/ESC close'
     : tab==='macro' ? '<b style="color:#9fb6e8">W/S shape macro</b> · &#8596; pick · ENT → all params · CT&#8597; jump'
     : tab==='hybrid' ? '<b style="color:#9fb6e8">W/S shape macro</b> · &#8597; macros / key params · ENT → all · CT&#8597; jump'
     : '&#8596; field · &#8597; row · <b style="color:#9fb6e8">Ctrl+arrows = jump category</b> · ENT open';
@@ -372,34 +403,29 @@ function drawSourceParams(body,macro,yTop){
         body.appendChild(tag('','position:absolute;left:'+(x+8)+'px;top:'+(y+2)+'px;font-size:8px;color:'+g.col+';opacity:.92',f[0]));
         if(pickerFor(eng,f[0]))body.appendChild(tag('','position:absolute;left:'+(x+8+f[0].length*5+2)+'px;top:'+(y+2)+'px;font-size:8px;color:#6f86c8','▸'));
         body.appendChild(el('','position:absolute;left:'+barX+'px;top:'+(y+4)+'px;width:'+barW+'px;height:4px;background:#1b1b24;border-radius:2px'));
-        if(macro){
-          // Macro-offset viz (Tim 2026-06-22), mirroring the amber LFO/auto meter
-          // (drawModPreviewMeter) but in BLUE: a base tick (what the param is set
-          // to), a range outline (how far the macro can move it, from->to) and a
-          // bright head (where the macro currently sits). Only on macro-moved params.
-          const off=paramOffset(f[0]), tweak=baseOff[eng+'|SOURCE|'+mi]||0;
-          const shown=Math.max(2,Math.min(100,pbase(mi)+tweak));   // base = set value
-          let thr=0; SRCM[eng].forEach(m=>{const w=m.tg[f[0]];if(w)thr+=Math.abs(w)*100;});
-          const isTarget=thr>0.5;
-          const mp=isTarget?Math.max(-shown,Math.min(100-shown,off)):0;
-          const px=v=>barX+Math.max(0,Math.min(100,v))/100*barW;
-          const baseX=px(shown), curX=px(shown+mp);
-          if(isTarget){ // range outline (macro reach)
-            const rL=px(shown-thr), rR=px(shown+thr);
-            body.appendChild(el('','position:absolute;left:'+rL+'px;top:'+(y+2)+'px;width:'+Math.max(2,rR-rL)+'px;height:7px;border:1px solid rgba(95,155,235,.55);background:rgba(95,155,235,.10);border-radius:1px'));
-          }
-          body.appendChild(el('','position:absolute;left:'+barX+'px;top:'+(y+4)+'px;width:'+Math.max(0,baseX-barX)+'px;height:4px;background:#3a4a5e;border-radius:2px')); // base fill
-          if(isTarget){
-            if(mp>0.5)body.appendChild(el('','position:absolute;left:'+baseX+'px;top:'+(y+4)+'px;width:'+(curX-baseX)+'px;height:4px;background:#4f9cf0;border-radius:2px'));
-            else if(mp<-0.5)body.appendChild(el('','position:absolute;left:'+curX+'px;top:'+(y+4)+'px;width:'+(baseX-curX)+'px;height:4px;background:#e2748a;border-radius:2px'));
-            body.appendChild(el('','position:absolute;left:'+baseX+'px;top:'+(y+2)+'px;width:1px;height:7px;background:#cfe0ff'));       // base tick (set value)
-            body.appendChild(el('','position:absolute;left:'+(curX-1)+'px;top:'+(y+1)+'px;width:2px;height:9px;background:#7fb6ff'));    // current head
-          }
+        // Macro-offset meter (Tim 2026-06-22): drawn on the SAME normal-foldout bars,
+        // NOT a separate macro foldout. Mirrors the amber LFO/auto meter
+        // (drawModPreviewMeter) but in BLUE — a base tick (what the param is set to),
+        // a range outline (the macro's reach, from->to) and a bright head (where the
+        // macro currently sits). Shows for ANY macro-moved param in ANY foldout;
+        // plain bar + value otherwise.
+        let thr=0; SRCM[eng].forEach(m=>{const w=m.tg[f[0]];if(w)thr+=Math.abs(w)*100;});
+        const shown=Math.max(2,Math.min(100,pbase(mi)+(baseOff[eng+'|SOURCE|'+mi]||0)));
+        const px=v=>barX+Math.max(0,Math.min(100,v))/100*barW;
+        if(thr>0.5){ // macro target -> blue meter
+          const mp=Math.max(-shown,Math.min(100-shown,paramOffset(f[0])));
+          const baseX=px(shown), curX=px(shown+mp), rL=px(shown-thr), rR=px(shown+thr);
+          body.appendChild(el('','position:absolute;left:'+rL+'px;top:'+(y+2)+'px;width:'+Math.max(2,rR-rL)+'px;height:7px;border:1px solid rgba(95,155,235,.55);background:rgba(95,155,235,.10);border-radius:1px'));
+          body.appendChild(el('','position:absolute;left:'+barX+'px;top:'+(y+4)+'px;width:'+Math.max(0,baseX-barX)+'px;height:4px;background:#3a4a5e;border-radius:2px'));
+          if(mp>0.5)body.appendChild(el('','position:absolute;left:'+baseX+'px;top:'+(y+4)+'px;width:'+(curX-baseX)+'px;height:4px;background:#4f9cf0;border-radius:2px'));
+          else if(mp<-0.5)body.appendChild(el('','position:absolute;left:'+curX+'px;top:'+(y+4)+'px;width:'+(baseX-curX)+'px;height:4px;background:#e2748a;border-radius:2px'));
+          body.appendChild(el('','position:absolute;left:'+baseX+'px;top:'+(y+2)+'px;width:1px;height:7px;background:#cfe0ff'));
+          body.appendChild(el('','position:absolute;left:'+(curX-1)+'px;top:'+(y+1)+'px;width:2px;height:9px;background:#7fb6ff'));
           const tv=Math.round(Math.max(0,Math.min(100,shown+mp)))+'%', vc=foc?'#fff':(mp>0.5?'#9fc4ec':(mp<-0.5?'#e2a0a8':'#cfcfda'));
           body.appendChild(tag('','position:absolute;left:'+(x+colW-4-tv.length*5)+'px;top:'+(y+2)+'px;font-size:8px;color:'+vc,tv));
         } else {
           const v=''+f[1];
-          body.appendChild(el('','position:absolute;left:'+barX+'px;top:'+(y+4)+'px;width:'+(pbase(mi)/100*barW)+'px;height:4px;background:#3a6ea0;border-radius:2px'));
+          body.appendChild(el('','position:absolute;left:'+barX+'px;top:'+(y+4)+'px;width:'+(px(shown)-barX)+'px;height:4px;background:#3a6ea0;border-radius:2px'));
           body.appendChild(tag('','position:absolute;left:'+(x+colW-4-v.length*5)+'px;top:'+(y+2)+'px;font-size:8px;color:'+(foc?'#fff':'#cfcfda'),v));
         }
         idx++; y+=11;
@@ -431,17 +457,20 @@ function onKey(e){
     else if(k==='ArrowUp')pickIdx=Math.max(0,pickIdx-1);
     else if(k==='Enter'||k==='Escape'||k==='ArrowLeft')pickOpen=null;
     e.preventDefault();render();return;}
-  if(open>=0||macroOpen>=0){
-    if(k==='Escape'||k==='ArrowLeft'||k==='Enter'){open=-1;macroOpen=-1;e.preventDefault();render();return;}
-    if(macroOpen>=0){ // foldout = all params; W/S edits the focused param's base
-      const s=secs[macroOpen];
-      if(k==='ArrowDown'){pfld=Math.min(s.params.length-1,pfld+1);e.preventDefault();render();return;}
-      if(k==='ArrowUp'){pfld=Math.max(0,pfld-1);e.preventDefault();render();return;}
-      if(isWS(k)){const key=eng+'|'+s.key+'|'+pfld;baseOff[key]=Math.max(-40,Math.min(40,(baseOff[key]||0)+((k==='w'||k==='W')?6:-6)));e.preventDefault();render();return;}
-      return;
-    }
-    if(k==='ArrowDown'){fld++;e.preventDefault();render();return;}
+  if(macroPageOpen>=0){ // macro PAGE (editor): pick a target route; ESC/Left/Enter back
+    const n=Object.keys(SRCM[eng][macroPageOpen].tg).length;
+    if(k==='Escape'||k==='ArrowLeft'||k==='Enter')macroPageOpen=-1;
+    else if(k==='ArrowDown')pfld=Math.min(n,pfld+1);   // n = the +assign row
+    else if(k==='ArrowUp')pfld=Math.max(0,pfld-1);
+    e.preventDefault();render();return;
+  }
+  if(open>=0){ // the ONE normal foldout: param bars (macro offsets shown as the meter)
+    const s=secs[open], isSrc=!!(s.src||s.isMacro||s.srcFold);
+    const total=isSrc?srcGroups().reduce((a,g)=>a+g.f.length,0):s.rows.flat().length;
+    if(k==='Escape'||k==='ArrowLeft'||k==='Enter'){open=-1;e.preventDefault();render();return;}
+    if(k==='ArrowDown'){fld=Math.min(total-1,fld+1);e.preventDefault();render();return;}
     if(k==='ArrowUp'){fld=Math.max(0,fld-1);e.preventDefault();render();return;}
+    if(isWS(k)&&isSrc){const key=eng+'|SOURCE|'+fld;baseOff[key]=Math.max(-40,Math.min(40,(baseOff[key]||0)+((k==='w'||k==='W')?6:-6)));e.preventDefault();render();return;}
     return;
   }
   if(ctrl&&k.startsWith('Arrow')){const t=ctrlTarget(k.slice(5).toLowerCase());if(t>=0){sec=t;fld=0;}e.preventDefault();render();return;}
@@ -456,7 +485,9 @@ function onKey(e){
   if(k==='Enter'){const lbl=focLabel(secs[sec]);if(pickerFor(eng,lbl)){pickOpen=lbl;pickIdx=0;}else openFold();e.preventDefault();render();return;}
 }
 function nF(s){return s.isMacro?s.macros.length:s.rows[0].length;}
-function openFold(){const s=sections()[sec];if(s.isMacro||s.srcFold){macroOpen=sec;pfld=0;}else open=sec;}
+function openFold(){const s=sections()[sec];
+  if(s.isMacro){macroPageOpen=Math.min(fld,s.macros.length-1);pfld=0;}  // macro -> macro PAGE
+  else open=sec;}                                                        // param/section -> foldout
 
 const LEG={
  layout:`<h3>1 · Engine page — rich SOURCE + category nav</h3>
@@ -468,7 +499,8 @@ const LEG={
  macro:`<h3>2 · Macro SOURCE (easy layer)</h3>
    <p>Same page, but <b>SOURCE is shown as 4 easy macros</b> instead of raw params (the rest of the page is unchanged — macros are <b>SOURCE-only</b>). The full real params are always one press away.</p>
    <ul><li><span class="k">←/→</span> pick a macro, <span class="k">W/S</span> shape it — right inline. Macros are <b>bipolar</b> (−/<b>·</b>/+, center = no effect). Watch the <b>TONE</b> preview move.</li>
-   <li><span class="k">ENTER</span> → all real SOURCE params; the <b>values are editable</b> (<span class="k">↑/↓</span> + <span class="k">W/S</span>). Each macro-moved param shows a <b>blue macro meter</b> (like the amber LFO/auto one): a <b>base tick</b> (what it's set to), a <b>blue outline</b> (the macro's reach, from→to) and a <b>bright head</b> (where the macro sits now).</li>
+   <li><span class="k">ENTER</span> on a <b>macro</b> → its <b>macro page</b> (assign / unassign / range / invert / mode) — NOT a separate foldout. <span class="k">ENTER</span> on a <b>param</b> → the normal foldout.</li>
+   <li>In that normal foldout, every macro-moved param shows a <b>blue macro meter</b> (like the amber LFO/auto one): a <b>base tick</b> (what it's set to), a <b>blue outline</b> (the macro's reach, from→to) and a <b>bright head</b> (where the macro sits now). Same bars — no separate macro foldout.</li>
    <li>Each engine gets its own 4 macros, named for what they touch (WAVE: OPEN / CLANG / WEIGHT / DIRT).</li></ul>`,
  hybrid:`<h3>3 · Hybrid — macros + 2 param lines</h3>
    <p>The best of both: SOURCE shows <b>4 macros</b> on top <b>and two rows of the most important raw params</b> under them — SOURCE earns the bigger budget. Quick shaping <i>and</i> real direct access without folding out.</p>
@@ -476,7 +508,7 @@ const LEG={
    <li>Next <b>two rows</b> = the ~10 key params for that engine (WAVE: OSC A / OSC B / MORPH / CUT / RES, then DRIVE / FOLD / RING / SYNC / F.AMT).</li>
    <li><span class="k">ENTER</span> is row-aware: a <b>▸ selector</b> param (OSC A/OSC B → wavetable, STRETCH → mode, BANK → browser) opens its <b>picker</b>; any other param → the full grouped SOURCE foldout. Tail sections stay lean (1 row).</li></ul>`,
 };
-function setTab(t){tab=t;sec=0;fld=0;open=-1;macroOpen=-1;pfld=0;pickOpen=null;
+function setTab(t){tab=t;sec=0;fld=0;open=-1;macroPageOpen=-1;pfld=0;pickOpen=null;
   document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x.dataset.t===t));
   document.getElementById('legend').innerHTML=LEG[t];
   document.getElementById('hint').textContent=
@@ -495,14 +527,15 @@ function setTab(t){tab=t;sec=0;fld=0;open=-1;macroOpen=-1;pfld=0;pickOpen=null;
     const d=el('tab');d.textContent=l;d.dataset.t=t;d.onclick=()=>setTab(t);tb.appendChild(d);});
   const eb=document.getElementById('ens');
   Object.keys(EN).forEach(k=>{const d=el('en');d.textContent=EN[k].name;d.dataset.e=k;d.classList.toggle('on',k===eng);
-    d.onclick=()=>{eng=k;sec=0;fld=0;open=-1;macroOpen=-1;pfld=0;pickOpen=null;
+    d.onclick=()=>{eng=k;sec=0;fld=0;open=-1;macroPageOpen=-1;pfld=0;pickOpen=null;
       document.querySelectorAll('.en').forEach(x=>x.classList.toggle('on',x.dataset.e===k));render();};eb.appendChild(d);});
   const dev=document.getElementById('dev');dev.addEventListener('keydown',onKey);dev.addEventListener('click',()=>dev.focus());
   const q=new URLSearchParams(location.search);
   if(q.get('eng')&&EN[q.get('eng')]){eng=q.get('eng');document.querySelectorAll('.en').forEach(x=>x.classList.toggle('on',x.dataset.e===eng));}
   setTab(['layout','macro','hybrid'].includes(q.get('tab'))?q.get('tab'):'layout');
   if(q.get('sec'))sec=+q.get('sec'); if(q.get('fld'))fld=+q.get('fld');
-  if(q.get('open')==='1')open=sec; if(q.get('macro')==='1'){macroOpen=sec;pfld=+(q.get('pfld')||0);}
+  if(q.get('open')==='1'||q.get('macro')==='1'){open=sec;fld=+(q.get('pfld')||0);} // foldout (one kind now)
+  if(q.get('mpage')!==null&&q.get('mpage')!==undefined&&q.get('mpage')!==''){macroPageOpen=+q.get('mpage');pfld=0;} // macro page demo
   q.getAll('mv').forEach(s=>{const [sk,i,v]=s.split(',');macroState[mkey(eng,sk,+i)]=+v;}); // demo preset
   if(q.get('pick')&&pickerFor(eng,q.get('pick'))){pickOpen=q.get('pick');pickIdx=+(q.get('pidx')||0);} // demo picker
   render();
