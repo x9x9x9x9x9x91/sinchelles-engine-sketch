@@ -48,7 +48,7 @@
 </style>
 
 <h1>Sinchelles ENGINE — rich SOURCE · category nav · macro rows</h1>
-<p class="sub">click the screen, then drive with the keyboard. engine buttons switch the sound. <span style="color:#5a5a68">· build 2026-06-22b (foldout 2-col)</span></p>
+<p class="sub">click the screen, then drive with the keyboard. engine buttons switch the sound. <span style="color:#5a5a68">· build 2026-06-22c (inline accordion foldout)</span></p>
 <div class="tabs" id="tabs"></div>
 <div class="enrow" id="ens"></div>
 <div class="wrap">
@@ -225,38 +225,27 @@ function render(){
   const sh=el('subhdr');sh.innerHTML=`<span style="color:${COL.SRC}">${E.name}</span> <span style="color:#6f6f7d">engine voice</span>`;scr.appendChild(sh);
   const body=el('body');scr.appendChild(body);
   const secs=sections();
+  // the picker (wavetable/model/stretch/browser) IS a full-screen modal in the real
+  // app; the FOLDOUT is NOT — it expands INLINE (accordion) with the other sections
+  // still visible above/below. (Tim 2026-06-22: don't model the foldout as a subpage.)
   if(pickOpen){renderPicker(body);footer(body);return;}
-  if(open>=0){renderFold(body,secs);footer(body);return;}
-  if(macroOpen>=0){renderMacroFold(body,secs[macroOpen]);footer(body);return;}
-
-  let y=2,lastY=y;
+  const expanded = open>=0 ? open : (macroOpen>=0 ? macroOpen : -1);
+  const macroMode = macroOpen>=0;
+  // SOURCE is split across several "sections" (layout: one per group; hybrid: macro
+  // row + 2 param rows) but is logically ONE section: when any SOURCE part is
+  // expanded, the whole SOURCE foldout replaces ALL of them (rendered once).
+  const srcFam = x => !!(x.src||x.isMacro||x.srcFold);
+  const expandedSrc = expanded>=0 && srcFam(secs[expanded]);
+  let y=2, srcDone=false;
   secs.forEach((s,si)=>{
-    const fields=s.rows[0];
-    const focused=(si===sec);
-    if(focused){body.appendChild(el('','position:absolute;left:0;top:'+y+'px;width:480px;height:14px;background:var(--focusbg)'));
-                body.appendChild(el('','position:absolute;left:2px;top:'+y+'px;width:4px;height:14px;background:var(--rail)'));}
-    if(s.key){
-      const nm=el('','position:absolute;left:'+NAMEX+'px;top:'+(y+3)+'px;font-size:8px;color:'+s.col+';'+(focused?'':'opacity:.8'));
-      nm.textContent=s.key;body.appendChild(nm);
+    if(srcFam(s)){
+      if(expandedSrc){ if(!srcDone){ y=drawExpandedSource(body,y,macroMode)+2; srcDone=true; } return; }
+      drawCollapsedRow(body,s,si,y, expanded<0 && si===sec, expanded<0); y+=ROWH; return;
     }
-    {const ch=chordFor(si);if(ch){const b=el('badge','left:456px;top:'+(y+3)+'px');b.textContent=ch;body.appendChild(b);}}
-    fields.forEach((f,ci)=>{
-      const x=colX(ci), ff=focused&&ci===Math.min(fld,fields.length-1);
-      if(ff)body.appendChild(el('','position:absolute;left:'+(x-3)+'px;top:'+(y+2)+'px;height:11px;width:'+(cellW(f)+6)+'px;background:var(--pill);border-radius:1px'));
-      const lab=el('','position:absolute;left:'+x+'px;top:'+(y+3)+'px;font-size:8px;color:'+(ff?'var(--pillink)':s.col)+';'+(ff?'':(focused?'opacity:.85':'opacity:.45')));
-      lab.textContent=f[0];body.appendChild(lab);
-      const lw=f[0].length*5+5;
-      const val=el('','position:absolute;left:'+(x+lw)+'px;top:'+(y+3)+'px;font-size:8px;color:'+(ff?'var(--pillink)':(focused?'#dfe2ea':'#7e7e8c')));
-      val.textContent=f[1];body.appendChild(val);
-      if(!s.isMacro&&pickerFor(eng,f[0])){ // ENTER here opens a picker, not the foldout
-        const vw=(''+f[1]).length*5+4;
-        const g=el('','position:absolute;left:'+(x+lw+vw)+'px;top:'+(y+3)+'px;font-size:8px;color:'+(ff?'var(--pillink)':'#6f86c8'));
-        g.textContent='▸';body.appendChild(g);
-      }
-    });
-    y+=ROWH;lastY=y;
+    if(si===expanded){ y=drawExpandedTail(body,s,y)+2; return; }
+    drawCollapsedRow(body,s,si,y, expanded<0 && si===sec, expanded<0); y+=ROWH;
   });
-  body.appendChild(el('vline','left:'+(FX0-5)+'px;top:0;height:'+lastY+'px'));
+  if(expanded<0)body.appendChild(el('vline','left:'+(FX0-5)+'px;top:0;height:'+y+'px'));
   const dock=el('dock');dock.appendChild(el('','position:absolute;right:8px;top:4px;color:#8a8a98;font-size:8px')).textContent='AMP ENV';
   const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 150 24');
   svg.setAttribute('style','position:absolute;left:300px;top:18px;width:150px;height:24px');
@@ -264,6 +253,51 @@ function render(){
   p.setAttribute('fill','none');p.setAttribute('stroke','#6d6dba');p.setAttribute('stroke-width','1.2');svg.appendChild(p);dock.appendChild(svg);
   if(tab==='macro'||tab==='hybrid')toneBars(dock);
   body.appendChild(dock);footer(body);
+}
+// one collapsed section row (inline view): name + up to 5 fields + ctrl badge + ▸ markers
+function drawCollapsedRow(body,s,si,y,focused,showBadge){
+  const fields=s.rows[0];
+  if(focused){body.appendChild(el('','position:absolute;left:0;top:'+y+'px;width:480px;height:14px;background:var(--focusbg)'));
+              body.appendChild(el('','position:absolute;left:2px;top:'+y+'px;width:4px;height:14px;background:var(--rail)'));}
+  if(s.key){const nm=el('','position:absolute;left:'+NAMEX+'px;top:'+(y+3)+'px;font-size:8px;color:'+s.col+';'+(focused?'':'opacity:.8'));nm.textContent=s.key;body.appendChild(nm);}
+  if(showBadge){const ch=chordFor(si);if(ch){const b=el('badge','left:456px;top:'+(y+3)+'px');b.textContent=ch;body.appendChild(b);}}
+  fields.forEach((f,ci)=>{
+    const x=colX(ci), ff=focused&&ci===Math.min(fld,fields.length-1);
+    if(ff)body.appendChild(el('','position:absolute;left:'+(x-3)+'px;top:'+(y+2)+'px;height:11px;width:'+(cellW(f)+6)+'px;background:var(--pill);border-radius:1px'));
+    const lab=el('','position:absolute;left:'+x+'px;top:'+(y+3)+'px;font-size:8px;color:'+(ff?'var(--pillink)':s.col)+';'+(ff?'':(focused?'opacity:.85':'opacity:.45')));
+    lab.textContent=f[0];body.appendChild(lab);
+    const lw=f[0].length*5+5;
+    const val=el('','position:absolute;left:'+(x+lw)+'px;top:'+(y+3)+'px;font-size:8px;color:'+(ff?'var(--pillink)':(focused?'#dfe2ea':'#7e7e8c')));
+    val.textContent=f[1];body.appendChild(val);
+    if(!s.isMacro&&pickerFor(eng,f[0])){const vw=(''+f[1]).length*5+4;const g=el('','position:absolute;left:'+(x+lw+vw)+'px;top:'+(y+3)+'px;font-size:8px;color:'+(ff?'var(--pillink)':'#6f86c8'));g.textContent='▸';body.appendChild(g);}
+  });
+}
+// SOURCE expanded INLINE (accordion): one identity header ("SOURCE"), then ALL source
+// params grouped + 2-col when long, expanding below it. macroMode layers the offsets.
+function drawExpandedSource(body,yStart,macroMode){
+  body.appendChild(el('','position:absolute;left:0;top:'+yStart+'px;width:480px;height:13px;background:#18101e'));
+  body.appendChild(el('','position:absolute;left:2px;top:'+yStart+'px;width:4px;height:13px;background:'+COL.SRC));
+  const title=macroMode?'SOURCE  '+SRCM[eng].map((m,i)=>m.nm+' '+macroDisp(eng,'SOURCE',i)).join('  '):'SOURCE';
+  body.appendChild(tag('','position:absolute;left:'+NAMEX+'px;top:'+(yStart+3)+'px;font-size:8px;color:'+COL.SRC, title));
+  return drawSourceParams(body,macroMode,yStart+14);
+}
+// a tail section (VOICE/ENV/MIX/PATTERN) expanded INLINE: header + its own params flat.
+function drawExpandedTail(body,s,yStart){
+  body.appendChild(el('','position:absolute;left:0;top:'+yStart+'px;width:480px;height:13px;background:#18101e'));
+  body.appendChild(el('','position:absolute;left:2px;top:'+yStart+'px;width:4px;height:13px;background:'+s.col));
+  body.appendChild(tag('','position:absolute;left:'+NAMEX+'px;top:'+(yStart+3)+'px;font-size:8px;color:'+s.col, s.key||''));
+  let y=yStart+14;
+  const fields=s.rows.flat();
+  fields.forEach((f,i)=>{
+    const foc=i===Math.min(fld,fields.length-1);
+    if(foc)body.appendChild(el('','position:absolute;left:0;top:'+y+'px;width:480px;height:11px;background:rgba(214,84,96,.16)'));
+    body.appendChild(tag('','position:absolute;left:10px;top:'+(y+2)+'px;font-size:8px;color:'+s.col+';opacity:.92',f[0]));
+    body.appendChild(el('','position:absolute;left:150px;top:'+(y+4)+'px;width:230px;height:4px;background:#1b1b24;border-radius:2px'));
+    body.appendChild(el('','position:absolute;left:150px;top:'+(y+4)+'px;width:'+(pbase(i)/100*230)+'px;height:4px;background:#3a6ea0;border-radius:2px'));
+    const v=''+f[1];body.appendChild(tag('','position:absolute;left:'+(380-v.length*5)+'px;top:'+(y+2)+'px;font-size:8px;color:'+(foc?'#fff':'#cfcfda'),v));
+    y+=11;
+  });
+  return y;
 }
 // full-screen picker overlay (wavetable / model / stretch / bank) — the real app's
 // ENTER-on-selector-row behavior, e.g. ENTER on OSC A opens the WAVETABLE picker
@@ -302,23 +336,6 @@ function foldGroups(s){
   if(s.src) return EN[eng].src.map(g=>({nm:g.nm||'',col:g.col||COL.SRC,f:g.f}));
   return [{nm:'',col:s.col,f:s.rows.flat()}];
 }
-function renderFold(body,secs){
-  const s=secs[open];
-  if(s.src){renderSourceFoldout(body,false);return;}   // SOURCE: grouped + 2-col when long
-  const fh=el('','position:absolute;left:0;top:0;width:480px;height:13px;display:flex;align-items:center;padding:0 6px;font-size:8px;color:'+s.col+';background:#1a1016');
-  fh.textContent=s.key+' — all params';body.appendChild(fh);
-  const fields=s.rows.flat(), total=fields.length;
-  let y=16;
-  fields.forEach((f,i)=>{
-    const foc=i===Math.min(fld,total-1);
-    if(foc)body.appendChild(el('','position:absolute;left:0;top:'+y+'px;width:480px;height:11px;background:rgba(214,84,96,.16)'));
-    body.appendChild(tag('','position:absolute;left:10px;top:'+(y+2)+'px;font-size:8px;color:'+s.col+';opacity:.92',f[0]));
-    body.appendChild(el('','position:absolute;left:150px;top:'+(y+4)+'px;width:230px;height:4px;background:#1b1b24;border-radius:2px'));
-    body.appendChild(el('','position:absolute;left:150px;top:'+(y+4)+'px;width:'+(pbase(i)/100*230)+'px;height:4px;background:#3a6ea0;border-radius:2px'));
-    body.appendChild(tag('','position:absolute;right:8px;top:'+(y+2)+'px;font-size:8px;color:'+(foc?'#fff':'#cfcfda'),f[1]));
-    y+=11;
-  });
-}
 function tag(c,css,txt){const d=el(c,css);d.textContent=txt;return d;}
 function pbase(i){return 20+((i*43)%62);}  // deterministic base fill % per param
 // SOURCE macro contribution to a param, summed over the engine's SOURCE macros
@@ -337,20 +354,16 @@ function packGroups(groups){
   return [groups.slice(0,k),groups.slice(k)];
 }
 function colHeight(g){return g.reduce((a,x)=>a+(x.nm?10:0)+x.f.length*11,0);}
-// the SOURCE foldout — grouped, with the live 2-column split when long. macro=true
-// layers the macro offsets (blue +/red -) + editable %; macro=false shows raw values.
-function renderSourceFoldout(body,macro){
-  const fh=el('','position:absolute;left:0;top:0;width:480px;height:13px;display:flex;align-items:center;padding:0 6px;font-size:8px;color:'+COL.SRC+';background:#1a1016');
-  fh.textContent=macro
-    ? 'SOURCE · all params · '+SRCM[eng].map((m,i)=>m.nm+' '+macroDisp(eng,'SOURCE',i)).join(' ')
-    : 'SOURCE — all params';
-  body.appendChild(fh);
+// SOURCE params expanded INLINE starting at yTop (accordion, not a subpage): grouped,
+// with the live 2-column split when long. macro=true layers the macro offsets (blue +/
+// red -) + editable %; macro=false shows raw values. Returns the y below the block.
+function drawSourceParams(body,macro,yTop){
   const groups=srcGroups(), total=groups.reduce((n,g)=>n+g.f.length,0);
   const cols=packGroups(groups), two=cols.length===2, colW=two?234:468;
   const fc=Math.min(macro?pfld:fld,total-1);
-  let idx=0;
+  let idx=0, maxY=yTop;
   cols.forEach((cg,ci)=>{
-    const x=two?(ci===0?4:242):6; let y=16;
+    const x=two?(ci===0?4:242):6; let y=yTop;
     cg.forEach(g=>{
       if(g.nm){groupHeader(body,x,colW,y,g.nm,g.col);y+=10;}
       g.f.forEach(f=>{
@@ -376,10 +389,11 @@ function renderSourceFoldout(body,macro){
         idx++; y+=11;
       });
     });
+    if(y>maxY)maxY=y;
   });
-  if(two)body.appendChild(el('vline','left:240px;top:15px;height:'+(Math.max(colHeight(cols[0]),colHeight(cols[1]))+2)+'px'));
+  if(two)body.appendChild(el('vline','left:240px;top:'+yTop+'px;height:'+(maxY-yTop)+'px'));
+  return maxY;
 }
-function renderMacroFold(body,s){renderSourceFoldout(body,true);}
 // spectral 'tone' preview driven by SOURCE macros — sells inline shaping (macro tab)
 function toneBars(body){
   const n=10, x0=8, w=14, gap=2, top=8, h=34;
