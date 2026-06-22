@@ -48,7 +48,7 @@
 </style>
 
 <h1>Sinchelles ENGINE — rich SOURCE · category nav · macro rows</h1>
-<p class="sub">click the screen, then drive with the keyboard. engine buttons switch the sound. <span style="color:#5a5a68">· build 2026-06-22e (macro meter on normal foldout + macro page)</span></p>
+<p class="sub">click the screen, then drive with the keyboard. engine buttons switch the sound. <span style="color:#5a5a68">· build 2026-06-22f (macro + modulation stacked on the bar)</span></p>
 <div class="tabs" id="tabs"></div>
 <div class="enrow" id="ens"></div>
 <div class="wrap">
@@ -132,6 +132,10 @@ const KEY10={
  grow:['SHAPE','BRGHT','STRCH','FOLD','FM','WIDTH','FAN','DRIVE'],
  ditto:['SHP.A','TON.A','SHP.B','TON.B','XFM','GRN.A','ZAP.A','GRN.B','ZAP.B','B.SEMI'],
 };
+// demo: some params ALSO carry an LFO/auto MODULATION (amber), to show how it stacks
+// with the blue macro meter on the same bar. The mod oscillates AROUND the post-macro
+// value; depth/live are % units. (CUT/RES = macro + mod; F.AMT = mod only.)
+const MODS={ wave:{ 'CUT':{depth:16,live:9}, 'RES':{depth:11,live:-6}, 'F.AMT':{depth:14,live:7} } };
 const TAILM={
  VOICE:[{nm:'TONE',tg:{SEMI:0.5,GLIDE:0.4}},{nm:'BODY',tg:{GAIN:0.5,WIDTH:0.5}}],
  ENV:[{nm:'SNAP',tg:{ATK:-0.6,FALL:-0.5}},{nm:'SHAPE',tg:{SUS:0.6,CURVE:0.5}}],
@@ -412,21 +416,30 @@ function drawSourceParams(body,macro,yTop){
         let thr=0; SRCM[eng].forEach(m=>{const w=m.tg[f[0]];if(w)thr+=Math.abs(w)*100;});
         const shown=Math.max(2,Math.min(100,pbase(mi)+(baseOff[eng+'|SOURCE|'+mi]||0)));
         const px=v=>barX+Math.max(0,Math.min(100,v))/100*barW;
-        if(thr>0.5){ // macro target -> blue meter
-          const mp=Math.max(-shown,Math.min(100-shown,paramOffset(f[0])));
-          const baseX=px(shown), curX=px(shown+mp), rL=px(shown-thr), rR=px(shown+thr);
+        const mp=thr>0.5?Math.max(-shown,Math.min(100-shown,paramOffset(f[0]))):0;
+        const center=shown+mp;   // value AFTER the macro — modulation oscillates around this
+        if(thr>0.5){ // macro target -> blue meter (base tick + reach outline + head)
+          const baseX=px(shown), curX=px(center), rL=px(shown-thr), rR=px(shown+thr);
           body.appendChild(el('','position:absolute;left:'+rL+'px;top:'+(y+2)+'px;width:'+Math.max(2,rR-rL)+'px;height:7px;border:1px solid rgba(95,155,235,.55);background:rgba(95,155,235,.10);border-radius:1px'));
           body.appendChild(el('','position:absolute;left:'+barX+'px;top:'+(y+4)+'px;width:'+Math.max(0,baseX-barX)+'px;height:4px;background:#3a4a5e;border-radius:2px'));
           if(mp>0.5)body.appendChild(el('','position:absolute;left:'+baseX+'px;top:'+(y+4)+'px;width:'+(curX-baseX)+'px;height:4px;background:#4f9cf0;border-radius:2px'));
           else if(mp<-0.5)body.appendChild(el('','position:absolute;left:'+curX+'px;top:'+(y+4)+'px;width:'+(baseX-curX)+'px;height:4px;background:#e2748a;border-radius:2px'));
           body.appendChild(el('','position:absolute;left:'+baseX+'px;top:'+(y+2)+'px;width:1px;height:7px;background:#cfe0ff'));
-          body.appendChild(el('','position:absolute;left:'+(curX-1)+'px;top:'+(y+1)+'px;width:2px;height:9px;background:#7fb6ff'));
-          const tv=Math.round(Math.max(0,Math.min(100,shown+mp)))+'%', vc=foc?'#fff':(mp>0.5?'#9fc4ec':(mp<-0.5?'#e2a0a8':'#cfcfda'));
+          body.appendChild(el('','position:absolute;left:'+(curX-1)+'px;top:'+(y+2)+'px;width:2px;height:7px;background:#7fb6ff'));
+          const tv=Math.round(Math.max(0,Math.min(100,center)))+'%', vc=foc?'#fff':(mp>0.5?'#9fc4ec':(mp<-0.5?'#e2a0a8':'#cfcfda'));
           body.appendChild(tag('','position:absolute;left:'+(x+colW-4-tv.length*5)+'px;top:'+(y+2)+'px;font-size:8px;color:'+vc,tv));
         } else {
           const v=''+f[1];
           body.appendChild(el('','position:absolute;left:'+barX+'px;top:'+(y+4)+'px;width:'+(px(shown)-barX)+'px;height:4px;background:#3a6ea0;border-radius:2px'));
           body.appendChild(tag('','position:absolute;left:'+(x+colW-4-v.length*5)+'px;top:'+(y+2)+'px;font-size:8px;color:'+(foc?'#fff':'#cfcfda'),v));
+        }
+        // AMBER LFO/auto modulation, stacked ON TOP of the macro — oscillates around the
+        // post-macro value (center). Shows depth span + live head, the real app's amber.
+        const md=(MODS[eng]||{})[f[0]];
+        if(md){
+          const a=px(center-md.depth), b=px(center+md.depth), liveX=px(center+md.live);
+          body.appendChild(el('','position:absolute;left:'+a+'px;top:'+(y+0)+'px;width:'+Math.max(2,b-a)+'px;height:2px;background:rgba(232,190,80,.5);border-radius:1px')); // mod depth
+          body.appendChild(el('','position:absolute;left:'+(liveX-1)+'px;top:'+(y-1)+'px;width:2px;height:5px;background:#e8be50')); // live mod head
         }
         idx++; y+=11;
       });
@@ -501,6 +514,7 @@ const LEG={
    <ul><li><span class="k">←/→</span> pick a macro, <span class="k">W/S</span> shape it — right inline. Macros are <b>bipolar</b> (−/<b>·</b>/+, center = no effect). Watch the <b>TONE</b> preview move.</li>
    <li><span class="k">ENTER</span> on a <b>macro</b> → its <b>macro page</b> (assign / unassign / range / invert / mode) — NOT a separate foldout. <span class="k">ENTER</span> on a <b>param</b> → the normal foldout.</li>
    <li>In that normal foldout, every macro-moved param shows a <b>blue macro meter</b> (like the amber LFO/auto one): a <b>base tick</b> (what it's set to), a <b>blue outline</b> (the macro's reach, from→to) and a <b>bright head</b> (where the macro sits now). Same bars — no separate macro foldout.</li>
+   <li>A param can have <b>both</b>: macro (blue) re-sets the value, then <b>LFO/auto modulation (amber)</b> oscillates <i>around</i> that post-macro point — stacked on the same bar (amber depth span + live head above the blue). <span class="k">CUT</span>/<span class="k">RES</span> = macro + mod; <span class="k">F.AMT</span> = mod only.</li>
    <li>Each engine gets its own 4 macros, named for what they touch (WAVE: OPEN / CLANG / WEIGHT / DIRT).</li></ul>`,
  hybrid:`<h3>3 · Hybrid — macros + 2 param lines</h3>
    <p>The best of both: SOURCE shows <b>4 macros</b> on top <b>and two rows of the most important raw params</b> under them — SOURCE earns the bigger budget. Quick shaping <i>and</i> real direct access without folding out.</p>
