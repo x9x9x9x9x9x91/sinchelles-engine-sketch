@@ -48,7 +48,7 @@
 </style>
 
 <h1>Sinchelles ENGINE — rich SOURCE · category nav · macro rows</h1>
-<p class="sub">click the screen, then drive with the keyboard. engine buttons switch the sound. <span style="color:#5a5a68">· build 2026-06-22g (MACROS page = the different macros; ENTER edits one)</span></p>
+<p class="sub">click the screen, then drive with the keyboard. engine buttons switch the sound. <span style="color:#5a5a68">· build 2026-06-22h (one integrated bar: base + macro + mod -> actual value)</span></p>
 <div class="tabs" id="tabs"></div>
 <div class="enrow" id="ens"></div>
 <div class="wrap">
@@ -444,39 +444,41 @@ function drawSourceParams(body,macro,yTop){
         body.appendChild(tag('','position:absolute;left:'+(x+8)+'px;top:'+(y+2)+'px;font-size:8px;color:'+g.col+';opacity:.92',f[0]));
         if(pickerFor(eng,f[0]))body.appendChild(tag('','position:absolute;left:'+(x+8+f[0].length*5+2)+'px;top:'+(y+2)+'px;font-size:8px;color:#6f86c8','▸'));
         body.appendChild(el('','position:absolute;left:'+barX+'px;top:'+(y+4)+'px;width:'+barW+'px;height:4px;background:#1b1b24;border-radius:2px'));
-        // Macro-offset meter (Tim 2026-06-22): drawn on the SAME normal-foldout bars,
-        // NOT a separate macro foldout. Mirrors the amber LFO/auto meter
-        // (drawModPreviewMeter) but in BLUE — a base tick (what the param is set to),
-        // a range outline (the macro's reach, from->to) and a bright head (where the
-        // macro currently sits). Shows for ANY macro-moved param in ANY foldout;
-        // plain bar + value otherwise.
+        // ONE integrated rail (Tim 2026-06-22: no stacking — the real foldout row is ~11px).
+        // Shows where the value ACTUALLY is now = base + macro offset + modulation, plus the
+        // macro's reach (blue, hugging below) and the mod's range (amber, hugging above), all
+        // on one bar. Extends the real app's drawModPreviewMeter with the macro layer.
         let thr=0; SRCM[eng].forEach(m=>{const w=m.tg[f[0]];if(w)thr+=Math.abs(w)*100;});
-        const shown=Math.max(2,Math.min(100,pbase(mi)+(baseOff[eng+'|SOURCE|'+mi]||0)));
+        const base=Math.max(2,Math.min(100,pbase(mi)+(baseOff[eng+'|SOURCE|'+mi]||0)));
         const px=v=>barX+Math.max(0,Math.min(100,v))/100*barW;
-        const mp=thr>0.5?Math.max(-shown,Math.min(100-shown,paramOffset(f[0]))):0;
-        const center=shown+mp;   // value AFTER the macro — modulation oscillates around this
-        if(thr>0.5){ // macro target -> blue meter (base tick + reach outline + head)
-          const baseX=px(shown), curX=px(center), rL=px(shown-thr), rR=px(shown+thr);
-          body.appendChild(el('','position:absolute;left:'+rL+'px;top:'+(y+2)+'px;width:'+Math.max(2,rR-rL)+'px;height:7px;border:1px solid rgba(95,155,235,.55);background:rgba(95,155,235,.10);border-radius:1px'));
-          body.appendChild(el('','position:absolute;left:'+barX+'px;top:'+(y+4)+'px;width:'+Math.max(0,baseX-barX)+'px;height:4px;background:#3a4a5e;border-radius:2px'));
-          if(mp>0.5)body.appendChild(el('','position:absolute;left:'+baseX+'px;top:'+(y+4)+'px;width:'+(curX-baseX)+'px;height:4px;background:#4f9cf0;border-radius:2px'));
-          else if(mp<-0.5)body.appendChild(el('','position:absolute;left:'+curX+'px;top:'+(y+4)+'px;width:'+(baseX-curX)+'px;height:4px;background:#e2748a;border-radius:2px'));
-          body.appendChild(el('','position:absolute;left:'+baseX+'px;top:'+(y+2)+'px;width:1px;height:7px;background:#cfe0ff'));
-          body.appendChild(el('','position:absolute;left:'+(curX-1)+'px;top:'+(y+2)+'px;width:2px;height:7px;background:#7fb6ff'));
-          const tv=Math.round(Math.max(0,Math.min(100,center)))+'%', vc=foc?'#fff':(mp>0.5?'#9fc4ec':(mp<-0.5?'#e2a0a8':'#cfcfda'));
-          body.appendChild(tag('','position:absolute;left:'+(x+colW-4-tv.length*5)+'px;top:'+(y+2)+'px;font-size:8px;color:'+vc,tv));
+        const macroOff=thr>0.5?Math.max(-base,Math.min(100-base,paramOffset(f[0]))):0;
+        const macroPt=base+macroOff;                    // value after the macro
+        const md=(MODS[eng]||{})[f[0]];                 // {depth, live} or undefined
+        const actual=Math.max(0,Math.min(100,macroPt+(md?md.live:0)));  // live value NOW
+        if(thr>0.5||md){
+          const cap=(xx,col)=>body.appendChild(el('','position:absolute;left:'+xx+'px;top:'+(y+3)+'px;width:1px;height:6px;background:'+col));
+          // value fill: 0 -> where it actually is now
+          body.appendChild(el('','position:absolute;left:'+barX+'px;top:'+(y+4)+'px;width:'+Math.max(0,px(actual)-barX)+'px;height:4px;background:#34506e;border-radius:2px'));
+          // macro reach (blue) hugging just BELOW the bar
+          if(thr>0.5){const rL=px(base-thr),rR=px(base+thr);
+            body.appendChild(el('','position:absolute;left:'+rL+'px;top:'+(y+9)+'px;width:'+Math.max(2,rR-rL)+'px;height:1px;background:rgba(95,155,235,.6)'));
+            body.appendChild(el('','position:absolute;left:'+rL+'px;top:'+(y+8)+'px;width:1px;height:3px;background:rgba(95,155,235,.6)'));
+            body.appendChild(el('','position:absolute;left:'+rR+'px;top:'+(y+8)+'px;width:1px;height:3px;background:rgba(95,155,235,.6)'));}
+          // mod range (amber) hugging just ABOVE the bar
+          if(md){const aL=px(macroPt-md.depth),aR=px(macroPt+md.depth);
+            body.appendChild(el('','position:absolute;left:'+aL+'px;top:'+(y+3)+'px;width:'+Math.max(2,aR-aL)+'px;height:1px;background:rgba(232,190,80,.75)'));
+            body.appendChild(el('','position:absolute;left:'+aL+'px;top:'+(y+2)+'px;width:1px;height:3px;background:rgba(232,190,80,.75)'));
+            body.appendChild(el('','position:absolute;left:'+aR+'px;top:'+(y+2)+'px;width:1px;height:3px;background:rgba(232,190,80,.75)'));}
+          cap(px(base),'#8a8a98');                       // base (set) tick — dim reference
+          if(thr>0.5)cap(px(macroPt),'#4f9cf0');         // macro point — where the macro put it
+          // ACTUAL value now — bright headline head
+          body.appendChild(el('','position:absolute;left:'+(px(actual)-1)+'px;top:'+(y+1)+'px;width:2px;height:9px;background:#dff0ff'));
+          const tv=Math.round(actual)+'%';
+          body.appendChild(tag('','position:absolute;left:'+(x+colW-4-tv.length*5)+'px;top:'+(y+2)+'px;font-size:8px;color:'+(foc?'#fff':'#cfcfda'),tv));
         } else {
           const v=''+f[1];
-          body.appendChild(el('','position:absolute;left:'+barX+'px;top:'+(y+4)+'px;width:'+(px(shown)-barX)+'px;height:4px;background:#3a6ea0;border-radius:2px'));
+          body.appendChild(el('','position:absolute;left:'+barX+'px;top:'+(y+4)+'px;width:'+(px(base)-barX)+'px;height:4px;background:#3a6ea0;border-radius:2px'));
           body.appendChild(tag('','position:absolute;left:'+(x+colW-4-v.length*5)+'px;top:'+(y+2)+'px;font-size:8px;color:'+(foc?'#fff':'#cfcfda'),v));
-        }
-        // AMBER LFO/auto modulation, stacked ON TOP of the macro — oscillates around the
-        // post-macro value (center). Shows depth span + live head, the real app's amber.
-        const md=(MODS[eng]||{})[f[0]];
-        if(md){
-          const a=px(center-md.depth), b=px(center+md.depth), liveX=px(center+md.live);
-          body.appendChild(el('','position:absolute;left:'+a+'px;top:'+(y+0)+'px;width:'+Math.max(2,b-a)+'px;height:2px;background:rgba(232,190,80,.5);border-radius:1px')); // mod depth
-          body.appendChild(el('','position:absolute;left:'+(liveX-1)+'px;top:'+(y-1)+'px;width:2px;height:5px;background:#e8be50')); // live mod head
         }
         idx++; y+=11;
       });
@@ -564,7 +566,7 @@ const LEG={
    <ul><li><span class="k">←/→</span> pick a macro, <span class="k">W/S</span> shape it — right inline. Macros are <b>bipolar</b> (−/<b>·</b>/+, center = no effect). Watch the <b>TONE</b> preview move.</li>
    <li>The <b>MACROS page</b> is its own page (real app: <span class="k">Tab+Shift+Down</span>) — there's no separate "enter a macro": the page <i>is</i> the macros. It shows all 4 as a live <b>X/Y perform</b> surface; <span class="k">Ctrl+↕</span>/<span class="k">W,S</span> move <i>through</i> the macros, <span class="k">←→</span> sweep X, <span class="k">↕</span> sweep Y, and <span class="k">ENTER</span> drills into one macro's <b>editor</b> (routes / range / invert / mode). Here, <span class="k">ENTER</span> on the engine macro row opens that page. <span class="k">ENTER</span> on a <b>param</b> → the normal foldout.</li>
    <li>In that normal foldout, every macro-moved param shows a <b>blue macro meter</b> (like the amber LFO/auto one): a <b>base tick</b> (what it's set to), a <b>blue outline</b> (the macro's reach, from→to) and a <b>bright head</b> (where the macro sits now). Same bars — no separate macro foldout.</li>
-   <li>A param can have <b>both</b>: macro (blue) re-sets the value, then <b>LFO/auto modulation (amber)</b> oscillates <i>around</i> that post-macro point — stacked on the same bar (amber depth span + live head above the blue). <span class="k">CUT</span>/<span class="k">RES</span> = macro + mod; <span class="k">F.AMT</span> = mod only.</li>
+   <li>Everything reads on <b>one bar</b> (no stacking — the real row is ~11px): the fill shows where the value <b>actually is now</b> (base + macro + modulation); a dim tick = the <b>set value</b>, a blue tick = where the <b>macro</b> put it, a blue bracket below = the <b>macro's reach</b>, an amber bracket above = the <b>mod range</b>, and the bright head = the <b>live value</b>. <span class="k">CUT</span>/<span class="k">RES</span> = macro + mod; <span class="k">F.AMT</span> = mod only.</li>
    <li>Each engine gets its own 4 macros, named for what they touch (WAVE: OPEN / CLANG / WEIGHT / DIRT).</li></ul>`,
  hybrid:`<h3>3 · Hybrid — macros + 2 param lines</h3>
    <p>The best of both: SOURCE shows <b>4 macros</b> on top <b>and two rows of the most important raw params</b> under them — SOURCE earns the bigger budget. Quick shaping <i>and</i> real direct access without folding out.</p>
