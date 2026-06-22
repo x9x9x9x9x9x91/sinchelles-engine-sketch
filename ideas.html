@@ -146,6 +146,18 @@ const macroDisp=(e,s,i)=>{const v=macroVal(e,s,i);return v===0?'·':(v>0?'+'+v:'
 const COLW=81, FX0=66, NAMEX=10, ROWH=14;
 let tab='layout', eng='wave', sec=0, fld=0, open=-1, macroOpen=-1;
 let pfld=0;   // foldout param cursor
+let pickOpen=null, pickIdx=0;   // full-screen picker (wavetable / model / stretch / bank)
+// rows that OWN enter in the real app: ENTER opens their picker, NOT the foldout
+// (input_track.cpp openTrackRowEnterAction). everything else falls through to foldout.
+const PICK={
+ wave:{'OSC A':{t:'WAVETABLE · OSC A',items:['Triangle','Sine','Saw','Square','Vox Ahh','Bell','Metallic','Formant','PWM','Gritty','Reso','Digital','— IMPORTED —','vocal_chop.wt','glass_pad.wt']},
+       'OSC B':{t:'WAVETABLE · OSC B',items:['Sine','Triangle','Saw','Square','Vox Ahh','Bell','Metallic','Formant','PWM','Gritty','Reso','Digital']}},
+ miplaits:{'MODEL':{t:'MODEL',items:['Virtual Analog','Waveshaping','2-op FM','Granular','Harmonic','Wavetable','Chord','Speech / Vosim','Swarm','Filt. Noise','Particle','Inharm. String','Modal','Bass Drum','Snare','Hi-Hat']}},
+ sampler:{'BANK':{t:'SAMPLE BROWSER',items:['1 Drive','2 Vinyl','3 Choir','4 Rhodes','5 808','6 Field','7 Foley','8 Tape','▸ /breaks','▸ /oneshots']},
+          'STRCH':{t:'STRETCH MODE',items:['Clean (Warp1)','Signalsmith','RubberBand R3','Repitch','Grain']}},
+}
+function pickerFor(e,label){return (PICK[e]||{})[label]||null;}
+function focLabel(s){if(!s||s.isMacro||!s.rows)return '';const r=s.rows[0]||[];return (r[Math.min(fld,r.length-1)]||[''])[0];}
 
 function tailSecs(E){
   const t=[];
@@ -213,6 +225,7 @@ function render(){
   const sh=el('subhdr');sh.innerHTML=`<span style="color:${COL.SRC}">${E.name}</span> <span style="color:#6f6f7d">engine voice</span>`;scr.appendChild(sh);
   const body=el('body');scr.appendChild(body);
   const secs=sections();
+  if(pickOpen){renderPicker(body);footer(body);return;}
   if(open>=0){renderFold(body,secs);footer(body);return;}
   if(macroOpen>=0){renderMacroFold(body,secs[macroOpen]);footer(body);return;}
 
@@ -235,6 +248,11 @@ function render(){
       const lw=f[0].length*5+5;
       const val=el('','position:absolute;left:'+(x+lw)+'px;top:'+(y+3)+'px;font-size:8px;color:'+(ff?'var(--pillink)':(focused?'#dfe2ea':'#7e7e8c')));
       val.textContent=f[1];body.appendChild(val);
+      if(!s.isMacro&&pickerFor(eng,f[0])){ // ENTER here opens a picker, not the foldout
+        const vw=(''+f[1]).length*5+4;
+        const g=el('','position:absolute;left:'+(x+lw+vw)+'px;top:'+(y+3)+'px;font-size:8px;color:'+(ff?'var(--pillink)':'#6f86c8'));
+        g.textContent='▸';body.appendChild(g);
+      }
     });
     y+=ROWH;lastY=y;
   });
@@ -247,10 +265,27 @@ function render(){
   if(tab==='macro'||tab==='hybrid')toneBars(dock);
   body.appendChild(dock);footer(body);
 }
+// full-screen picker overlay (wavetable / model / stretch / bank) — the real app's
+// ENTER-on-selector-row behavior, e.g. ENTER on OSC A opens the WAVETABLE picker
+function renderPicker(body){
+  const pk=pickerFor(eng,pickOpen); if(!pk)return;
+  const fh=el('','position:absolute;left:0;top:0;width:480px;height:13px;display:flex;align-items:center;padding:0 6px;font-size:8px;color:'+COL.SRC+';background:#10202e');
+  fh.textContent=pk.t+'   (ENTER on '+pickOpen+' → this picker, not the foldout)';body.appendChild(fh);
+  const cur=Math.min(pickIdx,pk.items.length-1);
+  const perCol=14, colw=232;
+  pk.items.forEach((it,i)=>{
+    const c=Math.floor(i/perCol), r=i%perCol, x=8+c*colw, y=18+r*15;
+    const sel=i===cur;
+    if(sel)body.appendChild(el('','position:absolute;left:'+(x-4)+'px;top:'+y+'px;width:'+(colw-6)+'px;height:13px;background:var(--pill);border-radius:1px'));
+    const d=el('','position:absolute;left:'+x+'px;top:'+(y+2)+'px;font-size:8px;color:'+(sel?'var(--pillink)':(it.startsWith('—')||it.startsWith('▸')?'#6f6f7d':'#cfe3ff')));
+    d.textContent=(sel?'> ':'  ')+it;body.appendChild(d);
+  });
+}
 function colX(i){return FX0+i*COLW;}
 function footer(body){
   const f=el('foot');
-  f.innerHTML = macroOpen>=0 ? 'W/S edit param · &#8597; pick · ENT/ESC close'
+  f.innerHTML = pickOpen ? '<b style="color:#9fb6e8">'+pickOpen+' picker</b> · &#8597; choose · ENT/ESC close'
+    : macroOpen>=0 ? 'W/S edit param · &#8597; pick · ENT/ESC close'
     : open>=0 ? '&#8597; param · ENT/ESC close'
     : tab==='macro' ? '<b style="color:#9fb6e8">W/S shape macro</b> · &#8596; pick · ENT → all params · CT&#8597; jump'
     : tab==='hybrid' ? '<b style="color:#9fb6e8">W/S shape macro</b> · &#8597; macros / key params · ENT → all · CT&#8597; jump'
@@ -333,6 +368,11 @@ function toneBars(body){
 function isWS(k){return k==='w'||k==='W'||k==='s'||k==='S';}
 function onKey(e){
   const k=e.key,ctrl=e.ctrlKey||e.metaKey,secs=sections();
+  if(pickOpen){const pk=pickerFor(eng,pickOpen),n=pk?pk.items.length:0;
+    if(k==='ArrowDown')pickIdx=Math.min(n-1,pickIdx+1);
+    else if(k==='ArrowUp')pickIdx=Math.max(0,pickIdx-1);
+    else if(k==='Enter'||k==='Escape'||k==='ArrowLeft')pickOpen=null;
+    e.preventDefault();render();return;}
   if(open>=0||macroOpen>=0){
     if(k==='Escape'||k==='ArrowLeft'||k==='Enter'){open=-1;macroOpen=-1;e.preventDefault();render();return;}
     if(macroOpen>=0){ // foldout = all params; W/S edits the focused param's base
@@ -355,7 +395,7 @@ function onKey(e){
   if(k==='ArrowUp'){sec=Math.max(0,sec-1);fld=Math.min(fld,nF(secs[sec])-1);e.preventDefault();render();return;}
   if(k==='ArrowRight'){fld=Math.min(nF(secs[sec])-1,fld+1);e.preventDefault();render();return;}
   if(k==='ArrowLeft'){if(fld===0){openFold();}else fld--;e.preventDefault();render();return;}
-  if(k==='Enter'){openFold();e.preventDefault();render();return;}
+  if(k==='Enter'){const lbl=focLabel(secs[sec]);if(pickerFor(eng,lbl)){pickOpen=lbl;pickIdx=0;}else openFold();e.preventDefault();render();return;}
 }
 function nF(s){return s.isMacro?s.macros.length:s.rows[0].length;}
 function openFold(){const s=sections()[sec];if(s.isMacro||s.srcFold){macroOpen=sec;pfld=0;}else open=sec;}
@@ -365,7 +405,7 @@ const LEG={
    <p>Only <b>SOURCE</b> grows, as far as the engine earns (≤5 rows, grouped); every other section stays <b>one lean row</b> of its five most-used params.</p>
    <ul><li><span class="k">WAVE</span> — a row per oscillator (OSC A / OSC B), a BLEND row, then <b>FILTER</b> + <b>F.ENV</b> pulled up from VOICE (unison/detune stay on VOICE). The showcase.</li>
    <li><span class="k">DITTO</span> — dual genome: VOICE A / VOICE B / SHARED. The rest stay lean.</li>
-   <li><span class="k">ENTER</span> on SOURCE → foldout of <b>all</b> source params.</li>
+   <li><span class="k">ENTER</span> is row-aware (matches the real app): on a <b>▸ selector row</b> it opens that row's <b>picker</b> — OSC A/OSC B → wavetable, MODEL → model, STRETCH → mode, BANK → sample browser. On any other row → the foldout of <b>all</b> source params.</li>
    <li><b>Ctrl + arrows = jump category</b> (fixed chords, shown as badges at the right edge): <span class="k">⌃↑</span> SOURCE · <span class="k">⌃↓</span> PATTERN · <span class="k">⌃←</span> ENV · <span class="k">⌃→</span> MIX. Plain arrows walk.</li></ul>`,
  macro:`<h3>2 · Macro SOURCE (easy layer)</h3>
    <p>Same page, but <b>SOURCE is shown as 4 easy macros</b> instead of raw params (the rest of the page is unchanged — macros are <b>SOURCE-only</b>). The full real params are always one press away.</p>
@@ -376,9 +416,9 @@ const LEG={
    <p>The best of both: SOURCE shows <b>4 macros</b> on top <b>and two rows of the most important raw params</b> under them — SOURCE earns the bigger budget. Quick shaping <i>and</i> real direct access without folding out.</p>
    <ul><li>Top row = the <b>4 macros</b> (<span class="k">W/S</span> shapes, bipolar, TONE preview reacts).</li>
    <li>Next <b>two rows</b> = the ~10 key params for that engine (WAVE: OSC A / OSC B / MORPH / CUT / RES, then DRIVE / FOLD / RING / SYNC / F.AMT).</li>
-   <li><span class="k">ENTER</span> on any of them → the full grouped SOURCE foldout (macro offsets shown). Tail sections stay lean (1 row).</li></ul>`,
+   <li><span class="k">ENTER</span> is row-aware: a <b>▸ selector</b> param (OSC A/OSC B → wavetable, STRETCH → mode, BANK → browser) opens its <b>picker</b>; any other param → the full grouped SOURCE foldout. Tail sections stay lean (1 row).</li></ul>`,
 };
-function setTab(t){tab=t;sec=0;fld=0;open=-1;macroOpen=-1;pfld=0;
+function setTab(t){tab=t;sec=0;fld=0;open=-1;macroOpen=-1;pfld=0;pickOpen=null;
   document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x.dataset.t===t));
   document.getElementById('legend').innerHTML=LEG[t];
   document.getElementById('hint').textContent=
@@ -397,7 +437,7 @@ function setTab(t){tab=t;sec=0;fld=0;open=-1;macroOpen=-1;pfld=0;
     const d=el('tab');d.textContent=l;d.dataset.t=t;d.onclick=()=>setTab(t);tb.appendChild(d);});
   const eb=document.getElementById('ens');
   Object.keys(EN).forEach(k=>{const d=el('en');d.textContent=EN[k].name;d.dataset.e=k;d.classList.toggle('on',k===eng);
-    d.onclick=()=>{eng=k;sec=0;fld=0;open=-1;macroOpen=-1;pfld=0;
+    d.onclick=()=>{eng=k;sec=0;fld=0;open=-1;macroOpen=-1;pfld=0;pickOpen=null;
       document.querySelectorAll('.en').forEach(x=>x.classList.toggle('on',x.dataset.e===k));render();};eb.appendChild(d);});
   const dev=document.getElementById('dev');dev.addEventListener('keydown',onKey);dev.addEventListener('click',()=>dev.focus());
   const q=new URLSearchParams(location.search);
@@ -406,6 +446,7 @@ function setTab(t){tab=t;sec=0;fld=0;open=-1;macroOpen=-1;pfld=0;
   if(q.get('sec'))sec=+q.get('sec'); if(q.get('fld'))fld=+q.get('fld');
   if(q.get('open')==='1')open=sec; if(q.get('macro')==='1'){macroOpen=sec;pfld=+(q.get('pfld')||0);}
   q.getAll('mv').forEach(s=>{const [sk,i,v]=s.split(',');macroState[mkey(eng,sk,+i)]=+v;}); // demo preset
+  if(q.get('pick')&&pickerFor(eng,q.get('pick'))){pickOpen=q.get('pick');pickIdx=+(q.get('pidx')||0);} // demo picker
   render();
 })();
 </script>
