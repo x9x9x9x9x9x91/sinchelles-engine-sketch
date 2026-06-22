@@ -110,20 +110,31 @@ const EN={
    mix:[['VOL','0 dB'],['PAN','C'],['COMP','0%'],['MIX','0%'],['DUCK','OFF']],
    pat:[['LEN','1/4'],['STEPS','1'],['PROB','100%'],['HUM','0%'],['SWING','0%']]},
 };
-// macros (idea 3): per-section named macros, each driving a few params (with base fill %)
-const MAC={
- SOURCE:[{nm:'GRAB',t:[['BANK',30],['START',12],['LEN',60]]},
-         {nm:'MOTION',t:[['RATE',50],['SCRUB',30],['DIR',100]]},
-         {nm:'SHAPE',t:[['STRCH',40],['LOOP',66],['PITCH',50]]}],
- VOICE:[{nm:'TONE',t:[['SEMI',50],['GLIDE',0]]},{nm:'BODY',t:[['GAIN',60],['WIDTH',40]]}],
- ENV:[{nm:'SNAP',t:[['ATK',10],['FALL',20]]},{nm:'SHAPE',t:[['SUS',80],['CURVE',35],['EMPH',0]]}],
- MIX:[{nm:'LEVEL',t:[['VOL',80],['PAN',50]]},{nm:'COLOR',t:[['DJF',50],['COMP',20]]}],
- PATTERN:[{nm:'GRID',t:[['LEN',40],['STEPS',50],['RES',60]]},{nm:'FEEL',t:[['PROB',100],['SWING',25]]}],
+// macros (idea 3): the EASY in-line layer. each macro = a BIPOLAR offset (-/0/+,
+// center = no effect) over several real params 'that make sense'. tg maps a param
+// label -> weight. SOURCE macros are engine-aware; tail macros are generic.
+const SRCM={
+ sampler:[{nm:'GRAB',tg:{START:0.7,LEN:-0.4}},{nm:'MOTION',tg:{RATE:0.5,SCRUB:0.6}},{nm:'TONE',tg:{PITCH:0.5,STRCH:0.4}}],
+ miplaits:[{nm:'TIMBRE',tg:{HARM:0.6,TIMBRE:0.6}},{nm:'MORPH',tg:{MORPH:0.7,COLOR:0.5}},{nm:'TONE',tg:{LEVEL:0.5,AUX:0.6}}],
+ wave:[{nm:'BRIGHT',tg:{CUT:0.7,MORPH:0.4,SCAN:0.3}},{nm:'MOVE',tg:{RING:0.5,SYNC:0.5,FOLD:0.4}},{nm:'BODY',tg:{SUB:0.6,DRIVE:0.5,RES:0.3}}],
+ bd:[{nm:'PUNCH',tg:{PAMT:0.7,PDEC:-0.4}},{nm:'TONE',tg:{TONE:0.6,SHAPE:0.5}},{nm:'BODY',tg:{DECAY:0.6,DRIVE:0.5}}],
+ grow:[{nm:'BRIGHT',tg:{BRGHT:0.7,FOLD:0.4}},{nm:'MOVE',tg:{FM:0.6,FAN:0.5}},{nm:'BODY',tg:{SHAPE:0.5,DRIVE:0.5}}],
+ ditto:[{nm:'A SHAPE',tg:{TON:0.6,ZAP:0.4,GRN:0.3}},{nm:'B SHAPE',tg:{TON:0.5,DEC:0.4}},{nm:'CROSS',tg:{XFM:0.7,'B.SEMI':0.4}}],
 };
+const TAILM={
+ VOICE:[{nm:'TONE',tg:{SEMI:0.5,GLIDE:0.4}},{nm:'BODY',tg:{GAIN:0.5,WIDTH:0.5}}],
+ ENV:[{nm:'SNAP',tg:{ATK:-0.6,FALL:-0.5}},{nm:'SHAPE',tg:{SUS:0.6,CURVE:0.5}}],
+ MIX:[{nm:'LEVEL',tg:{VOL:0.6}},{nm:'COLOR',tg:{DJF:0.6,COMP:0.5}}],
+ PATTERN:[{nm:'GRID',tg:{STEPS:0.5,RES:0.5}},{nm:'FEEL',tg:{PROB:-0.4,SWING:0.6}}],
+};
+const macroState={}, baseOff={};      // macro values (-100..100) + per-param foldout base edits
+const mkey=(e,s,i)=>e+'|'+s+'|'+i;
+const macroVal=(e,s,i)=>macroState[mkey(e,s,i)]||0;
+const macroDisp=(e,s,i)=>{const v=macroVal(e,s,i);return v===0?'·':(v>0?'+'+v:''+v);};
 
 const COLW=81, FX0=66, NAMEX=10, ROWH=14;
 let tab='rich', eng='wave', sec=0, fld=0, open=-1, macroOpen=-1;
-let mval=58, psel=0, poff={};   // macro foldout state
+let pfld=0;   // foldout param cursor
 
 function tailSecs(E){
   const t=[];
@@ -136,15 +147,17 @@ function tailSecs(E){
 function sections(){
   const E=EN[eng];
   if(tab==='macro'){
-    const mk=(key,col,macros)=>({key,col,macros,rows:[macros.map(m=>[m.nm,'▸'])]});
-    const src = E.src.map((g,i)=>mk(g.nm||'SOURCE', g.col||COL.SRC, MAC.SOURCE.slice(0, i===0?3:0).length?MAC.SOURCE:MAC.SOURCE));
-    // one macro row per src group (first group carries the SOURCE macros)
-    const srcSecs = E.src.map((g,i)=> i===0 ? mk(g.nm||'SOURCE',g.col||COL.SRC,MAC.SOURCE)
-                                            : mk(g.nm,g.col||COL.SRC,MAC.SOURCE.slice(0,2)));
-    const tail=[];
-    if(!E.dual) tail.push(mk('VOICE',COL.VOICE,MAC.VOICE));
-    tail.push(mk('ENV',COL.ENV,MAC.ENV),mk('MIX',COL.MIX,MAC.MIX),mk('PATTERN',COL.PAT,MAC.PATTERN));
-    return [...srcSecs,...tail];
+    // each section = ONE row of its easy macros (inline); params[] = the full real
+    // list shown in the foldout. SOURCE collapses its rich groups into 3 macros.
+    const mk=(key,col,macros,params)=>({key,col,macros,params,
+      rows:[macros.map((m,i)=>[m.nm, macroDisp(eng,key,i)])]});
+    const srcParams=E.src.flatMap(g=>g.f);
+    const out=[mk('SOURCE', E.dual?COL.SHARED:COL.SRC, SRCM[eng], srcParams)];
+    if(!E.dual) out.push(mk('VOICE',COL.VOICE,TAILM.VOICE,E.voice));
+    out.push(mk('ENV',COL.ENV,TAILM.ENV,E.env),
+             mk('MIX',COL.MIX,TAILM.MIX,E.mix),
+             mk('PATTERN',COL.PAT,TAILM.PATTERN,E.pat));
+    return out;
   }
   const srcSecs=E.src.map((g,i)=>({key:g.nm||'', col:g.col||COL.SRC, rows:[g.f], src:true, first:i===0}));
   return [...srcSecs, ...tailSecs(E)];
@@ -203,20 +216,21 @@ function render(){
     });
     y+=ROWH;lastY=y;
   });
-  body.appendChild(el('vline','left:'+(FX0-(tab==='nav'?5:5))+'px;top:0;height:'+lastY+'px'));
+  body.appendChild(el('vline','left:'+(FX0-5)+'px;top:0;height:'+lastY+'px'));
   const dock=el('dock');dock.appendChild(el('','position:absolute;right:8px;top:4px;color:#8a8a98;font-size:8px')).textContent='AMP ENV';
   const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 150 24');
   svg.setAttribute('style','position:absolute;left:300px;top:18px;width:150px;height:24px');
   const p=document.createElementNS('http://www.w3.org/2000/svg','path');p.setAttribute('d','M2 22 L40 4 L92 4 L130 22');
   p.setAttribute('fill','none');p.setAttribute('stroke','#6d6dba');p.setAttribute('stroke-width','1.2');svg.appendChild(p);dock.appendChild(svg);
+  if(tab==='macro')toneBars(dock);
   body.appendChild(dock);footer(body);
 }
 function colX(i){return FX0+i*COLW;}
 function footer(body){
   const f=el('foot');
-  f.innerHTML = macroOpen>=0 ? 'W/S move offset · &#8597; pick · ESC back'
+  f.innerHTML = macroOpen>=0 ? 'W/S edit param · &#8597; pick · ESC back'
     : open>=0 ? 'W/S edit · &#8597; param · ESC back'
-    : tab==='macro' ? 'W/S macro · ENT params · CT&#8597; jump'
+    : tab==='macro' ? '<b style="color:#9fb6e8">W/S shape macro</b> · &#8596; pick · ENT → all params · CT&#8597; jump'
     : tab==='nav' ? '&#8596; field · &#8597; row · <b style="color:#9fb6e8">Ctrl+arrows = jump category</b> · ENT open'
     : 'W/S edit · &#8596; field · &#8597; row · ENT open';
   body.appendChild(f);
@@ -240,47 +254,53 @@ function renderFold(body,secs){
   });
 }
 function tag(c,css,txt){const d=el(c,css);d.textContent=txt;return d;}
+function pbase(i){return 20+((i*43)%62);}  // deterministic base fill % per param
+function paramOffset(s,label){let o=0;s.macros.forEach((m,i)=>{const w=m.tg[label];if(w)o+=macroVal(eng,s.key,i)*w;});return o;}
 function renderMacroFold(body,s){
-  const m=s.macros[Math.min(fld,s.macros.length-1)];
   const fh=el('','position:absolute;left:0;top:0;width:480px;height:13px;display:flex;align-items:center;padding:0 6px;font-size:8px;color:'+s.col+';background:#1a1016');
-  fh.textContent=(s.key||'SOURCE')+' · '+m.nm+' macro — one knob offsets its params';body.appendChild(fh);
-  let y=18;
-  // master macro slider
-  const selM = psel===0;
-  if(selM)body.appendChild(el('','position:absolute;left:0;top:'+y+'px;width:480px;height:14px;background:rgba(64,140,220,.20)'));
-  body.appendChild(tag('','position:absolute;left:8px;top:'+(y+3)+'px;font-size:8px;color:#bfe0ff',m.nm+' (macro)'));
-  body.appendChild(el('','position:absolute;left:150px;top:'+(y+5)+'px;width:230px;height:6px;background:#16263a;border-radius:3px'));
-  body.appendChild(el('','position:absolute;left:150px;top:'+(y+5)+'px;width:'+(mval/100*230)+'px;height:6px;background:var(--pill);border-radius:3px'));
-  body.appendChild(tag('','position:absolute;right:8px;top:'+(y+3)+'px;font-size:8px;color:#cfe3ff',(mval>=50?'+':'')+(mval-50)+'%'));
-  y+=18;
-  body.appendChild(tag('','position:absolute;left:8px;top:'+y+'px;font-size:7px;color:#7f7f8d','underlying params  —  base fill + macro offset (blue) + your tweak:'));y+=12;
-  m.t.forEach((f,i)=>{
-    const off=(poff[s.key+m.nm+i]||0);
-    const base=f[1], shown=Math.max(2,Math.min(230, base/100*230 + (mval-50)*1.4 + off*1.4));
-    const selP=psel===i+1;
-    if(selP)body.appendChild(el('','position:absolute;left:0;top:'+y+'px;width:480px;height:13px;background:rgba(214,84,96,.16)'));
-    body.appendChild(tag('','position:absolute;left:14px;top:'+(y+3)+'px;font-size:8px;color:'+s.col+';opacity:.9',f[0]));
-    body.appendChild(el('','position:absolute;left:150px;top:'+(y+5)+'px;width:230px;height:5px;background:#1b1b24;border-radius:2px'));
-    const baseW=Math.max(2,Math.min(230,base/100*230));
-    body.appendChild(el('','position:absolute;left:150px;top:'+(y+5)+'px;width:'+baseW+'px;height:5px;background:#3a4a5e;border-radius:2px'));
-    if(shown>baseW)body.appendChild(el('','position:absolute;left:'+(150+baseW)+'px;top:'+(y+5)+'px;width:'+(shown-baseW)+'px;height:5px;background:var(--pill);opacity:.75;border-radius:2px'));
-    body.appendChild(tag('','position:absolute;right:8px;top:'+(y+3)+'px;font-size:8px;color:#cfcfda',Math.round(shown/230*100)+'%'));
+  fh.textContent=(s.key||'SOURCE')+' — all params  ·  macros: '+s.macros.map((m,i)=>m.nm+' '+macroDisp(eng,s.key,i)).join('  ');
+  body.appendChild(fh);
+  let y=16; const TX=140, TW=250;
+  s.params.slice(0,20).forEach((f,i)=>{
+    const off=paramOffset(s,f[0]) + (baseOff[eng+'|'+s.key+'|'+i]||0)*0; // (per-param tweak below)
+    const tweak=baseOff[eng+'|'+s.key+'|'+i]||0;
+    const base=pbase(i), shown=Math.max(2,Math.min(100, base+tweak));
+    const macroPart=Math.max(-base,Math.min(100-shown, off)); // visible macro delta
+    const focused=i===Math.min(pfld,s.params.length-1);
+    if(focused)body.appendChild(el('','position:absolute;left:0;top:'+y+'px;width:480px;height:13px;background:rgba(214,84,96,.16)'));
+    body.appendChild(tag('','position:absolute;left:10px;top:'+(y+3)+'px;font-size:8px;color:'+s.col+';opacity:.92',f[0]));
+    body.appendChild(el('','position:absolute;left:'+TX+'px;top:'+(y+5)+'px;width:'+TW+'px;height:5px;background:#1b1b24;border-radius:2px'));
+    const bw=shown/100*TW;
+    body.appendChild(el('','position:absolute;left:'+TX+'px;top:'+(y+5)+'px;width:'+bw+'px;height:5px;background:#3a4a5e;border-radius:2px'));
+    if(macroPart>0.5)body.appendChild(el('','position:absolute;left:'+(TX+bw)+'px;top:'+(y+5)+'px;width:'+(macroPart/100*TW)+'px;height:5px;background:var(--pill);opacity:.8;border-radius:2px'));
+    else if(macroPart<-0.5)body.appendChild(el('','position:absolute;left:'+(TX+bw+macroPart/100*TW)+'px;top:'+(y+5)+'px;width:'+(-macroPart/100*TW)+'px;height:5px;background:var(--rail);opacity:.7;border-radius:2px'));
+    body.appendChild(tag('','position:absolute;right:8px;top:'+(y+3)+'px;font-size:8px;color:#cfcfda',f[1]));
     y+=14;
   });
 }
+// spectral 'tone' preview driven by SOURCE macros — sells inline shaping (macro tab)
+function toneBars(body){
+  const n=10, x0=8, w=14, gap=2, top=8, h=34;
+  const m=SRCM[eng].map((_,i)=>macroVal(eng,'SOURCE',i)/100);
+  const a=m[0]||0,b=m[1]||0,c=m[2]||0;
+  for(let i=0;i<n;i++){const t=i/(n-1);
+    let v=0.42 + a*0.42*t + c*0.42*(1-t) + b*0.16*Math.sin(i*1.25);
+    v=Math.max(0.06,Math.min(1,v));const bh=v*h;
+    body.appendChild(el('','position:absolute;left:'+(x0+i*(w+gap))+'px;top:'+(top+(h-bh))+'px;width:'+w+'px;height:'+bh+'px;background:'+COL.SRC+';opacity:.55;border-radius:1px'));
+  }
+  body.appendChild(tag('','position:absolute;left:8px;top:'+(top+h+2)+'px;font-size:7px;color:#6f6f7d','TONE  (moves with SOURCE macros)'));
+}
 
+function isWS(k){return k==='w'||k==='W'||k==='s'||k==='S';}
 function onKey(e){
   const k=e.key,ctrl=e.ctrlKey||e.metaKey,secs=sections();
   if(open>=0||macroOpen>=0){
-    if(k==='Escape'||(k==='ArrowLeft'&&open>=0)){open=-1;macroOpen=-1;psel=0;e.preventDefault();render();return;}
-    if(macroOpen>=0){
-      const m=secs[macroOpen].macros[Math.min(fld,secs[macroOpen].macros.length-1)];
-      if(k==='ArrowDown'){psel=Math.min(m.t.length,psel+1);e.preventDefault();render();return;}
-      if(k==='ArrowUp'){psel=Math.max(0,psel-1);e.preventDefault();render();return;}
-      if(k==='w'||k==='W'||k==='s'||k==='S'){const d=(k==='w'||k==='W')?6:-6;
-        if(psel===0)mval=Math.max(0,Math.min(100,mval+d));
-        else{const key=secs[macroOpen].key+m.nm+(psel-1);poff[key]=(poff[key]||0)+d;}
-        e.preventDefault();render();return;}
+    if(k==='Escape'||k==='ArrowLeft'){open=-1;macroOpen=-1;e.preventDefault();render();return;}
+    if(macroOpen>=0){ // foldout = all params; W/S edits the focused param's base
+      const s=secs[macroOpen];
+      if(k==='ArrowDown'){pfld=Math.min(s.params.length-1,pfld+1);e.preventDefault();render();return;}
+      if(k==='ArrowUp'){pfld=Math.max(0,pfld-1);e.preventDefault();render();return;}
+      if(isWS(k)){const key=eng+'|'+s.key+'|'+pfld;baseOff[key]=Math.max(-40,Math.min(40,(baseOff[key]||0)+((k==='w'||k==='W')?6:-6)));e.preventDefault();render();return;}
       return;
     }
     if(k==='ArrowDown'){fld++;e.preventDefault();render();return;}
@@ -288,6 +308,10 @@ function onKey(e){
     return;
   }
   if(ctrl&&k.startsWith('Arrow')){const t=ctrlTarget(k.slice(5).toLowerCase());if(t>=0){sec=t;fld=0;}e.preventDefault();render();return;}
+  // MACRO tab: plain W/S shapes the focused macro inline (bipolar, center=off)
+  if(tab==='macro'&&isWS(k)){const s=secs[sec];const i=Math.min(fld,s.macros.length-1);
+    const key=mkey(eng,s.key,i);macroState[key]=Math.max(-100,Math.min(100,(macroState[key]||0)+((k==='w'||k==='W')?10:-10)));
+    e.preventDefault();render();return;}
   if(k==='ArrowDown'){sec=Math.min(secs.length-1,sec+1);fld=Math.min(fld,nF(secs[sec])-1);e.preventDefault();render();return;}
   if(k==='ArrowUp'){sec=Math.max(0,sec-1);fld=Math.min(fld,nF(secs[sec])-1);e.preventDefault();render();return;}
   if(k==='ArrowRight'){fld=Math.min(nF(secs[sec])-1,fld+1);e.preventDefault();render();return;}
@@ -295,7 +319,7 @@ function onKey(e){
   if(k==='Enter'){openFold();e.preventDefault();render();return;}
 }
 function nF(s){return tab==='macro'?s.macros.length:s.rows[0].length;}
-function openFold(){if(tab==='macro'){macroOpen=sec;psel=0;}else open=sec;}
+function openFold(){if(tab==='macro'){macroOpen=sec;pfld=0;}else open=sec;}
 
 const LEG={
  rich:`<h3>1 · Rich SOURCE (engine-shaped)</h3>
@@ -311,12 +335,13 @@ const LEG={
    <li><span class="k">Ctrl ←</span> → ENV &nbsp; · &nbsp; <span class="k">Ctrl →</span> → MIX</li>
    <li>VOICE + WAVE's extra SOURCE rows: plain ↑/↓.</li></ul>
    <p style="color:#9a9aa8">Is this the right 4? Tell me which category each direction should own.</p>`,
- macro:`<h3>3 · Macro rows (prototype)</h3>
-   <p>Each row is a <b>macro</b> driving several params. <span class="k">ENTER</span> → foldout. The macro is one knob that <b>offsets</b> everything it owns; tweak a single param for fine control on top.</p>
-   <ul><li>In the foldout: <span class="k">W/S</span> moves the macro — watch all the blue offsets shift together.</li>
-   <li><span class="k">↑/↓</span> to a single param, then <span class="k">W/S</span> adds your own offset on top.</li></ul>`,
+ macro:`<h3>3 · Macro rows (easy layer)</h3>
+   <p>The <b>easy layer sits in-line</b>: each section shows 2–3 macros you shape right there. The <b>foldout has all the real params</b> for when you go deeper. Not hiding the instrument — just a fast top tier.</p>
+   <ul><li><span class="k">←/→</span> pick a macro, <span class="k">W/S</span> shape it. Macros are <b>bipolar</b> (−/<b>·</b>/+, center = no effect) so you can always get back. Watch the <b>TONE</b> preview move.</li>
+   <li><span class="k">ENTER</span> → all real params; the blue/red shows what your macros pushed. <span class="k">↑/↓</span> + <span class="k">W/S</span> to fine-tune a single param underneath.</li>
+   <li>Each engine gets its own macros (WAVE: BRIGHT / MOVE / BODY).</li></ul>`,
 };
-function setTab(t){tab=t;sec=0;fld=0;open=-1;macroOpen=-1;psel=0;
+function setTab(t){tab=t;sec=0;fld=0;open=-1;macroOpen=-1;pfld=0;
   document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x.dataset.t===t));
   document.getElementById('legend').innerHTML=LEG[t];
   document.getElementById('hint').textContent=
@@ -335,14 +360,15 @@ function setTab(t){tab=t;sec=0;fld=0;open=-1;macroOpen=-1;psel=0;
     const d=el('tab');d.textContent=l;d.dataset.t=t;d.onclick=()=>setTab(t);tb.appendChild(d);});
   const eb=document.getElementById('ens');
   Object.keys(EN).forEach(k=>{const d=el('en');d.textContent=EN[k].name;d.dataset.e=k;d.classList.toggle('on',k===eng);
-    d.onclick=()=>{eng=k;sec=0;fld=0;open=-1;macroOpen=-1;psel=0;
+    d.onclick=()=>{eng=k;sec=0;fld=0;open=-1;macroOpen=-1;pfld=0;
       document.querySelectorAll('.en').forEach(x=>x.classList.toggle('on',x.dataset.e===k));render();};eb.appendChild(d);});
   const dev=document.getElementById('dev');dev.addEventListener('keydown',onKey);dev.addEventListener('click',()=>dev.focus());
   const q=new URLSearchParams(location.search);
   if(q.get('eng')&&EN[q.get('eng')]){eng=q.get('eng');document.querySelectorAll('.en').forEach(x=>x.classList.toggle('on',x.dataset.e===eng));}
   setTab(['rich','nav','macro'].includes(q.get('tab'))?q.get('tab'):'rich');
   if(q.get('sec'))sec=+q.get('sec'); if(q.get('fld'))fld=+q.get('fld');
-  if(q.get('open')==='1')open=sec; if(q.get('macro')==='1'){macroOpen=sec;psel=+(q.get('psel')||0);}
+  if(q.get('open')==='1')open=sec; if(q.get('macro')==='1'){macroOpen=sec;pfld=+(q.get('pfld')||0);}
+  q.getAll('mv').forEach(s=>{const [sk,i,v]=s.split(',');macroState[mkey(eng,sk,+i)]=+v;}); // demo preset
   render();
 })();
 </script>
