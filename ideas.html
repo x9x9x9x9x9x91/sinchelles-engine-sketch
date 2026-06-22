@@ -133,7 +133,7 @@ const macroVal=(e,s,i)=>macroState[mkey(e,s,i)]||0;
 const macroDisp=(e,s,i)=>{const v=macroVal(e,s,i);return v===0?'·':(v>0?'+'+v:''+v);};
 
 const COLW=81, FX0=66, NAMEX=10, ROWH=14;
-let tab='rich', eng='wave', sec=0, fld=0, open=-1, macroOpen=-1;
+let tab='layout', eng='wave', sec=0, fld=0, open=-1, macroOpen=-1;
 let pfld=0;   // foldout param cursor
 
 function tailSecs(E){
@@ -147,17 +147,13 @@ function tailSecs(E){
 function sections(){
   const E=EN[eng];
   if(tab==='macro'){
-    // each section = ONE row of its easy macros (inline); params[] = the full real
-    // list shown in the foldout. SOURCE collapses its rich groups into 3 macros.
-    const mk=(key,col,macros,params)=>({key,col,macros,params,
-      rows:[macros.map((m,i)=>[m.nm, macroDisp(eng,key,i)])]});
+    // ONLY SOURCE is macro-ized (Tim): a single row of easy macros; params[] is the
+    // full real source list shown in the foldout. Every other section is a normal
+    // lean param row, exactly like the layout tab.
     const srcParams=E.src.flatMap(g=>g.f);
-    const out=[mk('SOURCE', E.dual?COL.SHARED:COL.SRC, SRCM[eng], srcParams)];
-    if(!E.dual) out.push(mk('VOICE',COL.VOICE,TAILM.VOICE,E.voice));
-    out.push(mk('ENV',COL.ENV,TAILM.ENV,E.env),
-             mk('MIX',COL.MIX,TAILM.MIX,E.mix),
-             mk('PATTERN',COL.PAT,TAILM.PATTERN,E.pat));
-    return out;
+    const srcMac={key:'SOURCE', col:E.dual?COL.SHARED:COL.SRC, macros:SRCM[eng], params:srcParams,
+                  isMacro:true, rows:[SRCM[eng].map((m,i)=>[m.nm, macroDisp(eng,'SOURCE',i)])]};
+    return [srcMac, ...tailSecs(E)];
   }
   const srcSecs=E.src.map((g,i)=>({key:g.nm||'', col:g.col||COL.SRC, rows:[g.f], src:true, first:i===0}));
   return [...srcSecs, ...tailSecs(E)];
@@ -204,7 +200,7 @@ function render(){
       const nm=el('','position:absolute;left:'+NAMEX+'px;top:'+(y+3)+'px;font-size:8px;color:'+s.col+';'+(focused?'':'opacity:.8'));
       nm.textContent=s.key;body.appendChild(nm);
     }
-    if(tab==='nav'){const ch=chordFor(si);if(ch){const b=el('badge','left:42px;top:'+(y+3)+'px');b.textContent=ch;body.appendChild(b);}}
+    {const ch=chordFor(si);if(ch){const b=el('badge','left:456px;top:'+(y+3)+'px');b.textContent=ch;body.appendChild(b);}}
     fields.forEach((f,ci)=>{
       const x=colX(ci), ff=focused&&ci===Math.min(fld,fields.length-1);
       if(ff)body.appendChild(el('','position:absolute;left:'+(x-3)+'px;top:'+(y+2)+'px;height:11px;width:'+(cellW(f)+6)+'px;background:var(--pill);border-radius:1px'));
@@ -231,8 +227,7 @@ function footer(body){
   f.innerHTML = macroOpen>=0 ? 'W/S edit param · &#8597; pick · ESC back'
     : open>=0 ? 'W/S edit · &#8597; param · ESC back'
     : tab==='macro' ? '<b style="color:#9fb6e8">W/S shape macro</b> · &#8596; pick · ENT → all params · CT&#8597; jump'
-    : tab==='nav' ? '&#8596; field · &#8597; row · <b style="color:#9fb6e8">Ctrl+arrows = jump category</b> · ENT open'
-    : 'W/S edit · &#8596; field · &#8597; row · ENT open';
+    : '&#8596; field · &#8597; row · <b style="color:#9fb6e8">Ctrl+arrows = jump category</b> · ENT open';
   body.appendChild(f);
 }
 function renderFold(body,secs){
@@ -274,7 +269,10 @@ function renderMacroFold(body,s){
     body.appendChild(el('','position:absolute;left:'+TX+'px;top:'+(y+5)+'px;width:'+bw+'px;height:5px;background:#3a4a5e;border-radius:2px'));
     if(macroPart>0.5)body.appendChild(el('','position:absolute;left:'+(TX+bw)+'px;top:'+(y+5)+'px;width:'+(macroPart/100*TW)+'px;height:5px;background:var(--pill);opacity:.8;border-radius:2px'));
     else if(macroPart<-0.5)body.appendChild(el('','position:absolute;left:'+(TX+bw+macroPart/100*TW)+'px;top:'+(y+5)+'px;width:'+(-macroPart/100*TW)+'px;height:5px;background:var(--rail);opacity:.7;border-radius:2px'));
-    body.appendChild(tag('','position:absolute;right:8px;top:'+(y+3)+'px;font-size:8px;color:#cfcfda',f[1]));
+    // live, editable value = base + your tweak + macro offset (W/S edits it)
+    const total=Math.round(Math.max(0,Math.min(100,shown+macroPart)));
+    const vc=focused?'#fff':(macroPart>0.5?'#9fc4ec':(macroPart<-0.5?'#e2a0a8':'#cfcfda'));
+    body.appendChild(tag('','position:absolute;right:8px;top:'+(y+3)+'px;font-size:8px;color:'+vc,total+'%'));
     y+=14;
   });
 }
@@ -308,8 +306,8 @@ function onKey(e){
     return;
   }
   if(ctrl&&k.startsWith('Arrow')){const t=ctrlTarget(k.slice(5).toLowerCase());if(t>=0){sec=t;fld=0;}e.preventDefault();render();return;}
-  // MACRO tab: plain W/S shapes the focused macro inline (bipolar, center=off)
-  if(tab==='macro'&&isWS(k)){const s=secs[sec];const i=Math.min(fld,s.macros.length-1);
+  // MACRO tab: plain W/S shapes the focused SOURCE macro inline (bipolar, center=off)
+  if(tab==='macro'&&isWS(k)&&secs[sec].isMacro){const s=secs[sec];const i=Math.min(fld,s.macros.length-1);
     const key=mkey(eng,s.key,i);macroState[key]=Math.max(-100,Math.min(100,(macroState[key]||0)+((k==='w'||k==='W')?10:-10)));
     e.preventDefault();render();return;}
   if(k==='ArrowDown'){sec=Math.min(secs.length-1,sec+1);fld=Math.min(fld,nF(secs[sec])-1);e.preventDefault();render();return;}
@@ -318,45 +316,36 @@ function onKey(e){
   if(k==='ArrowLeft'){if(fld===0){openFold();}else fld--;e.preventDefault();render();return;}
   if(k==='Enter'){openFold();e.preventDefault();render();return;}
 }
-function nF(s){return tab==='macro'?s.macros.length:s.rows[0].length;}
-function openFold(){if(tab==='macro'){macroOpen=sec;pfld=0;}else open=sec;}
+function nF(s){return s.isMacro?s.macros.length:s.rows[0].length;}
+function openFold(){const s=sections()[sec];if(s.isMacro){macroOpen=sec;pfld=0;}else open=sec;}
 
 const LEG={
- rich:`<h3>1 · Rich SOURCE (engine-shaped)</h3>
-   <p>Only <b>SOURCE</b> grows, and only as far as the engine earns — at most ~5 rows, grouped meaningfully. Everything else stays <b>one lean row</b> of its five most-used params.</p>
-   <ul><li><span class="k">WAVE</span> — a row per oscillator (OSC A / OSC B), a MIX/blend row, then <b>FILTER</b> + <b>F.ENV</b> pulled up from VOICE (unison/detune stay on VOICE). The showcase.</li>
-   <li><span class="k">DITTO</span> — its dual genome as VOICE A / VOICE B / SHARED.</li>
-   <li><span class="k">SAMPLER</span>/<span class="k">MIPLAITS</span>/<span class="k">DRUM</span>/<span class="k">GROW</span> — lean, 1–2 SOURCE rows.</li>
-   <li><span class="k">ENTER</span> on SOURCE → foldout shows <b>all</b> source params (every group), not just the focused row.</li></ul>`,
- nav:`<h3>2 · Ctrl+arrows = fixed category jumps</h3>
-   <p>Each chord always lands on the same category, from anywhere (your "Ctrl+Down = PATTERN" idea). Badges show the mapping:</p>
-   <ul><li><span class="k">Ctrl ↑</span> → SOURCE (top)</li>
-   <li><span class="k">Ctrl ↓</span> → PATTERN</li>
-   <li><span class="k">Ctrl ←</span> → ENV &nbsp; · &nbsp; <span class="k">Ctrl →</span> → MIX</li>
-   <li>VOICE + WAVE's extra SOURCE rows: plain ↑/↓.</li></ul>
-   <p style="color:#9a9aa8">Is this the right 4? Tell me which category each direction should own.</p>`,
- macro:`<h3>3 · Macro rows (easy layer)</h3>
-   <p>The <b>easy layer sits in-line</b>: each section shows 2–3 macros you shape right there. The <b>foldout has all the real params</b> for when you go deeper. Not hiding the instrument — just a fast top tier.</p>
-   <ul><li><span class="k">←/→</span> pick a macro, <span class="k">W/S</span> shape it. Macros are <b>bipolar</b> (−/<b>·</b>/+, center = no effect) so you can always get back. Watch the <b>TONE</b> preview move.</li>
-   <li><span class="k">ENTER</span> → all real params; the blue/red shows what your macros pushed. <span class="k">↑/↓</span> + <span class="k">W/S</span> to fine-tune a single param underneath.</li>
+ layout:`<h3>1 · Engine page — rich SOURCE + category nav</h3>
+   <p>Only <b>SOURCE</b> grows, as far as the engine earns (≤5 rows, grouped); every other section stays <b>one lean row</b> of its five most-used params.</p>
+   <ul><li><span class="k">WAVE</span> — a row per oscillator (OSC A / OSC B), a BLEND row, then <b>FILTER</b> + <b>F.ENV</b> pulled up from VOICE (unison/detune stay on VOICE). The showcase.</li>
+   <li><span class="k">DITTO</span> — dual genome: VOICE A / VOICE B / SHARED. The rest stay lean.</li>
+   <li><span class="k">ENTER</span> on SOURCE → foldout of <b>all</b> source params.</li>
+   <li><b>Ctrl + arrows = jump category</b> (fixed chords, shown as badges at the right edge): <span class="k">⌃↑</span> SOURCE · <span class="k">⌃↓</span> PATTERN · <span class="k">⌃←</span> ENV · <span class="k">⌃→</span> MIX. Plain arrows walk.</li></ul>`,
+ macro:`<h3>2 · Macro SOURCE (easy layer)</h3>
+   <p>Same page, but <b>SOURCE is shown as easy macros</b> instead of raw params (the rest of the page is unchanged — macros are <b>SOURCE-only</b>). The full real params are always one press away.</p>
+   <ul><li><span class="k">←/→</span> pick a macro, <span class="k">W/S</span> shape it — right inline. Macros are <b>bipolar</b> (−/<b>·</b>/+, center = no effect). Watch the <b>TONE</b> preview move.</li>
+   <li><span class="k">ENTER</span> → all real SOURCE params; blue/red shows what the macros pushed, and the <b>values are editable</b> (<span class="k">↑/↓</span> + <span class="k">W/S</span>).</li>
    <li>Each engine gets its own macros (WAVE: BRIGHT / MOVE / BODY).</li></ul>`,
 };
 function setTab(t){tab=t;sec=0;fld=0;open=-1;macroOpen=-1;pfld=0;
   document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x.dataset.t===t));
   document.getElementById('legend').innerHTML=LEG[t];
   document.getElementById('hint').textContent=
-    t==='nav'?'click the screen, then: Ctrl+arrows jump category · plain arrows walk · ENTER foldout'
-    :t==='macro'?'click the screen, then: arrows pick a macro · ENTER opens it · W/S moves the offset'
-    :'click the screen, then: arrows nav · ENTER → full SOURCE foldout · ESC back';
+    t==='macro'?'click the screen, then: ←/→ pick a SOURCE macro · W/S shape · ENTER → all params · Ctrl+arrows jump'
+    :'click the screen, then: arrows nav · Ctrl+arrows jump category · ENTER → SOURCE foldout';
   document.getElementById('cap').textContent=
-    t==='rich'?'Switch engines to see how SOURCE reshapes itself. WAVE / DITTO go rich; the rest stay lean.'
-    :t==='nav'?'Hold Ctrl and tap a direction — you jump straight to that category no matter where you were.'
-    :'Open a macro and hold W or S: the macro is an offset that slides all its params together.';
+    t==='macro'?'SOURCE is macros here; W/S shapes them inline and the TONE preview reacts. ENTER for the full editable params.'
+    :'Switch engines to see SOURCE reshape (WAVE/DITTO go rich, rest lean). Hold Ctrl + a direction to jump straight to a category.';
   render();
 }
 (function init(){
   const tb=document.getElementById('tabs');
-  [['rich','RICH SOURCE'],['nav','CTRL-NAV'],['macro','MACRO ROWS']].forEach(([t,l])=>{
+  [['layout','LAYOUT + NAV'],['macro','MACRO SOURCE']].forEach(([t,l])=>{
     const d=el('tab');d.textContent=l;d.dataset.t=t;d.onclick=()=>setTab(t);tb.appendChild(d);});
   const eb=document.getElementById('ens');
   Object.keys(EN).forEach(k=>{const d=el('en');d.textContent=EN[k].name;d.dataset.e=k;d.classList.toggle('on',k===eng);
@@ -365,7 +354,7 @@ function setTab(t){tab=t;sec=0;fld=0;open=-1;macroOpen=-1;pfld=0;
   const dev=document.getElementById('dev');dev.addEventListener('keydown',onKey);dev.addEventListener('click',()=>dev.focus());
   const q=new URLSearchParams(location.search);
   if(q.get('eng')&&EN[q.get('eng')]){eng=q.get('eng');document.querySelectorAll('.en').forEach(x=>x.classList.toggle('on',x.dataset.e===eng));}
-  setTab(['rich','nav','macro'].includes(q.get('tab'))?q.get('tab'):'rich');
+  setTab(['layout','macro'].includes(q.get('tab'))?q.get('tab'):'layout');
   if(q.get('sec'))sec=+q.get('sec'); if(q.get('fld'))fld=+q.get('fld');
   if(q.get('open')==='1')open=sec; if(q.get('macro')==='1'){macroOpen=sec;pfld=+(q.get('pfld')||0);}
   q.getAll('mv').forEach(s=>{const [sk,i,v]=s.split(',');macroState[mkey(eng,sk,+i)]=+v;}); // demo preset
