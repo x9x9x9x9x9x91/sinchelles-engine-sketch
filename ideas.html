@@ -113,13 +113,14 @@ const EN={
 // macros (idea 3): the EASY in-line layer. each macro = a BIPOLAR offset (-/0/+,
 // center = no effect) over several real params 'that make sense'. tg maps a param
 // label -> weight. SOURCE macros are engine-aware; tail macros are generic.
+// names chosen to hint at the params each macro moves (not abstract mood words)
 const SRCM={
- sampler:[{nm:'GRAB',tg:{START:0.7,LEN:-0.4}},{nm:'MOTION',tg:{RATE:0.5,SCRUB:0.6}},{nm:'TONE',tg:{PITCH:0.5,STRCH:0.4}},{nm:'LOOP',tg:{LOOP:0.7,DIR:0.5}}],
- miplaits:[{nm:'TIMBRE',tg:{HARM:0.6,TIMBRE:0.6}},{nm:'MORPH',tg:{MORPH:0.7,COLOR:0.5}},{nm:'TONE',tg:{LEVEL:0.5,AUX:0.6}},{nm:'AIR',tg:{AUX:0.5,COLOR:0.4}}],
- wave:[{nm:'BRIGHT',tg:{CUT:0.7,MORPH:0.4,SCAN:0.3}},{nm:'MOVE',tg:{RING:0.5,SYNC:0.5}},{nm:'BODY',tg:{SUB:0.6,RES:0.4}},{nm:'GRIT',tg:{DRIVE:0.6,FOLD:0.5}}],
- bd:[{nm:'PUNCH',tg:{PAMT:0.7,PDEC:-0.4}},{nm:'TONE',tg:{TONE:0.6,SHAPE:0.5}},{nm:'BODY',tg:{DECAY:0.6,DRIVE:0.5}},{nm:'SNAP',tg:{CLICK:0.6,PDEC:-0.3}}],
- grow:[{nm:'BRIGHT',tg:{BRGHT:0.7,FOLD:0.4}},{nm:'MOVE',tg:{FM:0.6,FAN:0.5}},{nm:'BODY',tg:{SHAPE:0.5,DRIVE:0.5}},{nm:'AIR',tg:{WIDTH:0.6,STRCH:0.4}}],
- ditto:[{nm:'A SHAPE',tg:{'TON.A':0.6,'ZAP.A':0.4}},{nm:'B SHAPE',tg:{'TON.B':0.6,'ZAP.B':0.4}},{nm:'CROSS',tg:{XFM:0.7,'B.SEMI':0.4}},{nm:'GRAIN',tg:{'GRN.A':0.5,'GRN.B':0.5}}],
+ sampler:[{nm:'WINDOW',tg:{START:0.7,LEN:-0.4}},{nm:'SPEED',tg:{RATE:0.5,SCRUB:0.6}},{nm:'PITCH',tg:{PITCH:0.5,STRCH:0.4}},{nm:'REPLAY',tg:{LOOP:0.7,DIR:0.5}}],
+ miplaits:[{nm:'HARMON',tg:{HARM:0.6,TIMBRE:0.6}},{nm:'SHADE',tg:{MORPH:0.7,COLOR:0.5}},{nm:'OUTPUT',tg:{LEVEL:0.5,AUX:0.6}},{nm:'AUX MIX',tg:{AUX:0.5,COLOR:0.4}}],
+ wave:[{nm:'OPEN',tg:{CUT:0.7,MORPH:0.4,SCAN:0.3}},{nm:'CLANG',tg:{RING:0.5,SYNC:0.5}},{nm:'WEIGHT',tg:{SUB:0.6,RES:0.4}},{nm:'DIRT',tg:{DRIVE:0.6,FOLD:0.5}}],
+ bd:[{nm:'SWEEP',tg:{PAMT:0.7,PDEC:-0.4}},{nm:'TIMBRE',tg:{TONE:0.6,SHAPE:0.5}},{nm:'BOOM',tg:{DECAY:0.6,DRIVE:0.5}},{nm:'CLICK',tg:{CLICK:0.6,PDEC:-0.3}}],
+ grow:[{nm:'SHEEN',tg:{BRGHT:0.7,FOLD:0.4}},{nm:'SWARM',tg:{FM:0.6,FAN:0.5}},{nm:'GROWL',tg:{SHAPE:0.5,DRIVE:0.5}},{nm:'WIDTH',tg:{WIDTH:0.6,STRCH:0.4}}],
+ ditto:[{nm:'VOICE A',tg:{'TON.A':0.6,'ZAP.A':0.4}},{nm:'VOICE B',tg:{'TON.B':0.6,'ZAP.B':0.4}},{nm:'CROSS',tg:{XFM:0.7,'B.SEMI':0.4}},{nm:'GRAINS',tg:{'GRN.A':0.5,'GRN.B':0.5}}],
 };
 // hybrid: the 5 most important raw SOURCE params kept inline under the macros
 const KEY5={
@@ -365,7 +366,7 @@ const LEG={
    <p>Same page, but <b>SOURCE is shown as 4 easy macros</b> instead of raw params (the rest of the page is unchanged — macros are <b>SOURCE-only</b>). The full real params are always one press away.</p>
    <ul><li><span class="k">←/→</span> pick a macro, <span class="k">W/S</span> shape it — right inline. Macros are <b>bipolar</b> (−/<b>·</b>/+, center = no effect). Watch the <b>TONE</b> preview move.</li>
    <li><span class="k">ENTER</span> → all real SOURCE params; blue/red shows what the macros pushed, and the <b>values are editable</b> (<span class="k">↑/↓</span> + <span class="k">W/S</span>).</li>
-   <li>Each engine gets its own 4 macros (WAVE: BRIGHT / MOVE / BODY / GRIT).</li></ul>`,
+   <li>Each engine gets its own 4 macros, named for what they touch (WAVE: OPEN / CLANG / WEIGHT / DIRT).</li></ul>`,
  hybrid:`<h3>3 · Hybrid — macros + key params</h3>
    <p>The best of both: SOURCE shows <b>4 macros</b> on top <b>and one row of the 5 most important raw params</b> right under them. Quick shaping <i>and</i> direct access, no foldout needed.</p>
    <ul><li>Top row = the <b>4 macros</b> (<span class="k">W/S</span> shapes, bipolar, TONE preview reacts).</li>
