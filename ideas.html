@@ -114,12 +114,21 @@ const EN={
 // center = no effect) over several real params 'that make sense'. tg maps a param
 // label -> weight. SOURCE macros are engine-aware; tail macros are generic.
 const SRCM={
- sampler:[{nm:'GRAB',tg:{START:0.7,LEN:-0.4}},{nm:'MOTION',tg:{RATE:0.5,SCRUB:0.6}},{nm:'TONE',tg:{PITCH:0.5,STRCH:0.4}}],
- miplaits:[{nm:'TIMBRE',tg:{HARM:0.6,TIMBRE:0.6}},{nm:'MORPH',tg:{MORPH:0.7,COLOR:0.5}},{nm:'TONE',tg:{LEVEL:0.5,AUX:0.6}}],
- wave:[{nm:'BRIGHT',tg:{CUT:0.7,MORPH:0.4,SCAN:0.3}},{nm:'MOVE',tg:{RING:0.5,SYNC:0.5,FOLD:0.4}},{nm:'BODY',tg:{SUB:0.6,DRIVE:0.5,RES:0.3}}],
- bd:[{nm:'PUNCH',tg:{PAMT:0.7,PDEC:-0.4}},{nm:'TONE',tg:{TONE:0.6,SHAPE:0.5}},{nm:'BODY',tg:{DECAY:0.6,DRIVE:0.5}}],
- grow:[{nm:'BRIGHT',tg:{BRGHT:0.7,FOLD:0.4}},{nm:'MOVE',tg:{FM:0.6,FAN:0.5}},{nm:'BODY',tg:{SHAPE:0.5,DRIVE:0.5}}],
- ditto:[{nm:'A SHAPE',tg:{'TON.A':0.6,'ZAP.A':0.4,'GRN.A':0.3}},{nm:'B SHAPE',tg:{'TON.B':0.5,'DEC.B':0.4}},{nm:'CROSS',tg:{XFM:0.7,'B.SEMI':0.4}}],
+ sampler:[{nm:'GRAB',tg:{START:0.7,LEN:-0.4}},{nm:'MOTION',tg:{RATE:0.5,SCRUB:0.6}},{nm:'TONE',tg:{PITCH:0.5,STRCH:0.4}},{nm:'LOOP',tg:{LOOP:0.7,DIR:0.5}}],
+ miplaits:[{nm:'TIMBRE',tg:{HARM:0.6,TIMBRE:0.6}},{nm:'MORPH',tg:{MORPH:0.7,COLOR:0.5}},{nm:'TONE',tg:{LEVEL:0.5,AUX:0.6}},{nm:'AIR',tg:{AUX:0.5,COLOR:0.4}}],
+ wave:[{nm:'BRIGHT',tg:{CUT:0.7,MORPH:0.4,SCAN:0.3}},{nm:'MOVE',tg:{RING:0.5,SYNC:0.5}},{nm:'BODY',tg:{SUB:0.6,RES:0.4}},{nm:'GRIT',tg:{DRIVE:0.6,FOLD:0.5}}],
+ bd:[{nm:'PUNCH',tg:{PAMT:0.7,PDEC:-0.4}},{nm:'TONE',tg:{TONE:0.6,SHAPE:0.5}},{nm:'BODY',tg:{DECAY:0.6,DRIVE:0.5}},{nm:'SNAP',tg:{CLICK:0.6,PDEC:-0.3}}],
+ grow:[{nm:'BRIGHT',tg:{BRGHT:0.7,FOLD:0.4}},{nm:'MOVE',tg:{FM:0.6,FAN:0.5}},{nm:'BODY',tg:{SHAPE:0.5,DRIVE:0.5}},{nm:'AIR',tg:{WIDTH:0.6,STRCH:0.4}}],
+ ditto:[{nm:'A SHAPE',tg:{'TON.A':0.6,'ZAP.A':0.4}},{nm:'B SHAPE',tg:{'TON.B':0.6,'ZAP.B':0.4}},{nm:'CROSS',tg:{XFM:0.7,'B.SEMI':0.4}},{nm:'GRAIN',tg:{'GRN.A':0.5,'GRN.B':0.5}}],
+};
+// hybrid: the 5 most important raw SOURCE params kept inline under the macros
+const KEY5={
+ sampler:['BANK','RATE','START','LEN','SCRUB'],
+ miplaits:['MODEL','HARM','TIMBRE','MORPH','LEVEL'],
+ wave:['OSC A','OSC B','MORPH','CUT','RES'],
+ bd:['FREQ','PAMT','DECAY','TONE','DRIVE'],
+ grow:['SHAPE','BRGHT','FOLD','FM','DRIVE'],
+ ditto:['SHP.A','TON.A','SHP.B','TON.B','XFM'],
 };
 const TAILM={
  VOICE:[{nm:'TONE',tg:{SEMI:0.5,GLIDE:0.4}},{nm:'BODY',tg:{GAIN:0.5,WIDTH:0.5}}],
@@ -154,6 +163,17 @@ function sections(){
     const srcMac={key:'SOURCE', col:E.dual?COL.SHARED:COL.SRC, macros:SRCM[eng], params:srcParams,
                   isMacro:true, rows:[SRCM[eng].map((m,i)=>[m.nm, macroDisp(eng,'SOURCE',i)])]};
     return [srcMac, ...tailSecs(E)];
+  }
+  if(tab==='hybrid'){
+    // SOURCE = a row of 4 macros (easy) PLUS one row of the 5 most important raw
+    // params (direct). ENTER on either opens the full grouped SOURCE foldout.
+    const srcParams=E.src.flatMap(g=>g.f);
+    const col=E.dual?COL.SHARED:COL.SRC;
+    const macRow={key:'SOURCE', col, macros:SRCM[eng], params:srcParams, isMacro:true,
+                  rows:[SRCM[eng].map((m,i)=>[m.nm, macroDisp(eng,'SOURCE',i)])]};
+    const key5=KEY5[eng].map(lbl=>srcParams.find(f=>f[0]===lbl)||[lbl,'—']);
+    const parRow={key:'', col, params:srcParams, srcFold:true, rows:[key5]};
+    return [macRow, parRow, ...tailSecs(E)];
   }
   const srcSecs=E.src.map((g,i)=>({key:g.nm||'', col:g.col||COL.SRC, rows:[g.f], src:true, first:i===0}));
   return [...srcSecs, ...tailSecs(E)];
@@ -218,7 +238,7 @@ function render(){
   svg.setAttribute('style','position:absolute;left:300px;top:18px;width:150px;height:24px');
   const p=document.createElementNS('http://www.w3.org/2000/svg','path');p.setAttribute('d','M2 22 L40 4 L92 4 L130 22');
   p.setAttribute('fill','none');p.setAttribute('stroke','#6d6dba');p.setAttribute('stroke-width','1.2');svg.appendChild(p);dock.appendChild(svg);
-  if(tab==='macro')toneBars(dock);
+  if(tab==='macro'||tab==='hybrid')toneBars(dock);
   body.appendChild(dock);footer(body);
 }
 function colX(i){return FX0+i*COLW;}
@@ -227,6 +247,7 @@ function footer(body){
   f.innerHTML = macroOpen>=0 ? 'W/S edit param · &#8597; pick · ENT/ESC close'
     : open>=0 ? '&#8597; param · ENT/ESC close'
     : tab==='macro' ? '<b style="color:#9fb6e8">W/S shape macro</b> · &#8596; pick · ENT → all params · CT&#8597; jump'
+    : tab==='hybrid' ? '<b style="color:#9fb6e8">W/S shape macro</b> · &#8597; macros / key params · ENT → all · CT&#8597; jump'
     : '&#8596; field · &#8597; row · <b style="color:#9fb6e8">Ctrl+arrows = jump category</b> · ENT open';
   body.appendChild(f);
 }
@@ -261,16 +282,17 @@ function renderFold(body,secs){
 }
 function tag(c,css,txt){const d=el(c,css);d.textContent=txt;return d;}
 function pbase(i){return 20+((i*43)%62);}  // deterministic base fill % per param
-function paramOffset(s,label){let o=0;s.macros.forEach((m,i)=>{const w=m.tg[label];if(w)o+=macroVal(eng,s.key,i)*w;});return o;}
+// SOURCE macro contribution to a param, summed over the engine's SOURCE macros
+function paramOffset(label){let o=0;SRCM[eng].forEach((m,i)=>{const w=m.tg[label];if(w)o+=macroVal(eng,'SOURCE',i)*w;});return o;}
 function renderMacroFold(body,s){
   const fh=el('','position:absolute;left:0;top:0;width:480px;height:13px;display:flex;align-items:center;padding:0 6px;font-size:8px;color:'+s.col+';background:#1a1016');
-  fh.textContent='SOURCE — all params  ·  macros: '+s.macros.map((m,i)=>m.nm+' '+macroDisp(eng,'SOURCE',i)).join('  ');
+  fh.textContent='SOURCE — all params  ·  macros: '+SRCM[eng].map((m,i)=>m.nm+' '+macroDisp(eng,'SOURCE',i)).join('  ');
   body.appendChild(fh);
   let y=16, idx=0; const TX=150, TW=230;
   EN[eng].src.forEach(g=>{
     if(g.nm){groupHeader(body,y,g.nm,g.col||COL.SRC);y+=10;}
     g.f.forEach(f=>{
-      const off=paramOffset(s,f[0]);
+      const off=paramOffset(f[0]);
       const tweak=baseOff[eng+'|SOURCE|'+idx]||0;
       const base=pbase(idx), shown=Math.max(2,Math.min(100,base+tweak));
       const macroPart=Math.max(-base,Math.min(100-shown,off));
@@ -320,7 +342,7 @@ function onKey(e){
   }
   if(ctrl&&k.startsWith('Arrow')){const t=ctrlTarget(k.slice(5).toLowerCase());if(t>=0){sec=t;fld=0;}e.preventDefault();render();return;}
   // MACRO tab: plain W/S shapes the focused SOURCE macro inline (bipolar, center=off)
-  if(tab==='macro'&&isWS(k)&&secs[sec].isMacro){const s=secs[sec];const i=Math.min(fld,s.macros.length-1);
+  if(isWS(k)&&secs[sec].isMacro){const s=secs[sec];const i=Math.min(fld,s.macros.length-1);
     const key=mkey(eng,s.key,i);macroState[key]=Math.max(-100,Math.min(100,(macroState[key]||0)+((k==='w'||k==='W')?10:-10)));
     e.preventDefault();render();return;}
   if(k==='ArrowDown'){sec=Math.min(secs.length-1,sec+1);fld=Math.min(fld,nF(secs[sec])-1);e.preventDefault();render();return;}
@@ -330,7 +352,7 @@ function onKey(e){
   if(k==='Enter'){openFold();e.preventDefault();render();return;}
 }
 function nF(s){return s.isMacro?s.macros.length:s.rows[0].length;}
-function openFold(){const s=sections()[sec];if(s.isMacro){macroOpen=sec;pfld=0;}else open=sec;}
+function openFold(){const s=sections()[sec];if(s.isMacro||s.srcFold){macroOpen=sec;pfld=0;}else open=sec;}
 
 const LEG={
  layout:`<h3>1 · Engine page — rich SOURCE + category nav</h3>
@@ -340,25 +362,32 @@ const LEG={
    <li><span class="k">ENTER</span> on SOURCE → foldout of <b>all</b> source params.</li>
    <li><b>Ctrl + arrows = jump category</b> (fixed chords, shown as badges at the right edge): <span class="k">⌃↑</span> SOURCE · <span class="k">⌃↓</span> PATTERN · <span class="k">⌃←</span> ENV · <span class="k">⌃→</span> MIX. Plain arrows walk.</li></ul>`,
  macro:`<h3>2 · Macro SOURCE (easy layer)</h3>
-   <p>Same page, but <b>SOURCE is shown as easy macros</b> instead of raw params (the rest of the page is unchanged — macros are <b>SOURCE-only</b>). The full real params are always one press away.</p>
+   <p>Same page, but <b>SOURCE is shown as 4 easy macros</b> instead of raw params (the rest of the page is unchanged — macros are <b>SOURCE-only</b>). The full real params are always one press away.</p>
    <ul><li><span class="k">←/→</span> pick a macro, <span class="k">W/S</span> shape it — right inline. Macros are <b>bipolar</b> (−/<b>·</b>/+, center = no effect). Watch the <b>TONE</b> preview move.</li>
    <li><span class="k">ENTER</span> → all real SOURCE params; blue/red shows what the macros pushed, and the <b>values are editable</b> (<span class="k">↑/↓</span> + <span class="k">W/S</span>).</li>
-   <li>Each engine gets its own macros (WAVE: BRIGHT / MOVE / BODY).</li></ul>`,
+   <li>Each engine gets its own 4 macros (WAVE: BRIGHT / MOVE / BODY / GRIT).</li></ul>`,
+ hybrid:`<h3>3 · Hybrid — macros + key params</h3>
+   <p>The best of both: SOURCE shows <b>4 macros</b> on top <b>and one row of the 5 most important raw params</b> right under them. Quick shaping <i>and</i> direct access, no foldout needed.</p>
+   <ul><li>Top row = the <b>4 macros</b> (<span class="k">W/S</span> shapes, bipolar, TONE preview reacts).</li>
+   <li>Second row = the <b>5 key params</b> for that engine (WAVE: OSC A / OSC B / MORPH / CUT / RES).</li>
+   <li><span class="k">ENTER</span> on either → the full grouped SOURCE foldout (with the macro offsets shown). Tail sections stay lean.</li></ul>`,
 };
 function setTab(t){tab=t;sec=0;fld=0;open=-1;macroOpen=-1;pfld=0;
   document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x.dataset.t===t));
   document.getElementById('legend').innerHTML=LEG[t];
   document.getElementById('hint').textContent=
     t==='macro'?'click the screen, then: ←/→ pick a SOURCE macro · W/S shape · ENTER → all params · Ctrl+arrows jump'
+    :t==='hybrid'?'click the screen, then: top row = 4 macros (W/S), 2nd row = 5 key params · ENTER → full foldout'
     :'click the screen, then: arrows nav · Ctrl+arrows jump category · ENTER → SOURCE foldout';
   document.getElementById('cap').textContent=
     t==='macro'?'SOURCE is macros here; W/S shapes them inline and the TONE preview reacts. ENTER for the full editable params.'
+    :t==='hybrid'?'4 macros up top for fast shaping, the 5 most important raw params right below — both inline. ENTER for everything.'
     :'Switch engines to see SOURCE reshape (WAVE/DITTO go rich, rest lean). Hold Ctrl + a direction to jump straight to a category.';
   render();
 }
 (function init(){
   const tb=document.getElementById('tabs');
-  [['layout','LAYOUT + NAV'],['macro','MACRO SOURCE']].forEach(([t,l])=>{
+  [['layout','LAYOUT + NAV'],['macro','MACRO SOURCE'],['hybrid','HYBRID']].forEach(([t,l])=>{
     const d=el('tab');d.textContent=l;d.dataset.t=t;d.onclick=()=>setTab(t);tb.appendChild(d);});
   const eb=document.getElementById('ens');
   Object.keys(EN).forEach(k=>{const d=el('en');d.textContent=EN[k].name;d.dataset.e=k;d.classList.toggle('on',k===eng);
@@ -367,7 +396,7 @@ function setTab(t){tab=t;sec=0;fld=0;open=-1;macroOpen=-1;pfld=0;
   const dev=document.getElementById('dev');dev.addEventListener('keydown',onKey);dev.addEventListener('click',()=>dev.focus());
   const q=new URLSearchParams(location.search);
   if(q.get('eng')&&EN[q.get('eng')]){eng=q.get('eng');document.querySelectorAll('.en').forEach(x=>x.classList.toggle('on',x.dataset.e===eng));}
-  setTab(['layout','macro'].includes(q.get('tab'))?q.get('tab'):'layout');
+  setTab(['layout','macro','hybrid'].includes(q.get('tab'))?q.get('tab'):'layout');
   if(q.get('sec'))sec=+q.get('sec'); if(q.get('fld'))fld=+q.get('fld');
   if(q.get('open')==='1')open=sec; if(q.get('macro')==='1'){macroOpen=sec;pfld=+(q.get('pfld')||0);}
   q.getAll('mv').forEach(s=>{const [sk,i,v]=s.split(',');macroState[mkey(eng,sk,+i)]=+v;}); // demo preset
